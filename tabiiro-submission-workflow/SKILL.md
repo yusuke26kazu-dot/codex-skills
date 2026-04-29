@@ -38,7 +38,7 @@ Default local template paths:
 - TL4: `C:\Users\NX023066\Downloads\レジャーTL4入稿シート_【施設名】202007改.xlsx`
 - TL3: `C:\Users\NX023066\Downloads\レジャーTL3入稿シート_【施設名】202306改.xlsx`
 - TL2: `C:\Users\NX023066\Downloads\レジャーTL2入稿シート_【施設名】.xlsx`
-- HPS: `C:\Users\NX023066\Downloads\入稿シート／自社簡易HP_S＋ドメイン【施設名】_250107.xlsx`
+- HPS: `C:\Users\NX023066\Downloads\入稿シート／自社簡易HP_S＋ドメイン【施設名】_250107 (1).xlsx`
 
 Use the matching template for the requested plan. For TO, select the appropriate plan sheet inside the same workbook.
 
@@ -106,6 +106,35 @@ Use these rules when 区分 is `更新` or the user asks for 更新制作/契約
 - Assign selected images numbered filenames such as `画像_01.jpg`, `画像_02.jpg`, or the workbook's requested image names, then enter those names in the relevant cells.
 - 店舗情報画像_01 and 店舗情報画像_02 must match their nearby copy. For example, do not pair an interior description with a food-only image.
 - Put only the selected/used images into the delivery image folder.
+
+## 簡易HPS New Rules
+
+Use these rules when the user asks for 自社簡易HP_S/簡易HPS入稿. 新規旅色入稿 and HPS template-change requests are different workflows, so do not combine their prompt templates.
+
+- Preserve the HPS Excel template's formatting, dropdowns, row heights, fonts, sizes, formulas, and validations exactly.
+- Follow stated character counts as closely as possible.
+- When HPS is submitted with a new Tabiiro listing, use the same researched facts, images, and positioning, but write the HPS copy from the shop/facility's own point of view.
+- Base color is specified by the user. If the color is white or black, choose it from the dropdown. For other colors, write the provided color code in the cell to the right of the theme-color label.
+- If no logo is specified, get the logo image from the web, save it with the image name `ロゴ`, and enter the same name in the sheet.
+- For メイン画像1 through メイン画像10, use specified images first. If unspecified, source suitable images from the web, respecting the size and aspect-ratio requirements. Crop if needed. It is not necessary to fill all 10 slots. If a clean compliant image is unavailable, leave that slot unused.
+- For each メイン画像 slot, set the dropdown cell to the left of the image-name cell to `有` when used and `無` when unused.
+- NEWS1 and TOPIX should announce that the website has opened. Use the logo or another suitable image.
+- For レコメンド, unless specified, pick one store/facility strength or commitment similar to a new Tabiiro submission and write it. The image must match the content.
+- 背景画像 should use an interior or exterior image.
+- 電話ボタン defaults: background color black, button color orange, text color white, unless specified.
+- SEO keywords, title, and description: unless specified, choose keywords based on likelihood of ranking in positions 1 through 10, not search volume alone. Avoid keywords where the top results are dominated by corporate sites and large media sites. Then write the title and description to match the selected keywords.
+- SNS and external links: add links when accounts or relevant external pages exist.
+- 取得希望ドメイン: if unspecified, choose the most appropriate domain candidate.
+- For HPS submitted with a new Tabiiro listing, use the same case folder and include HPS in the new-production email. Shared images may use the same filenames, but image folders must be separated into `旅色用` and `HP用`.
+
+## 簡易HPS Template Change Rules
+
+Use these rules when the user asks for 自社簡易HPテンプレ変更, 簡易HPC→簡易HPS, or テンプレ変更制作依頼.
+
+- The input rules are mostly the same as new HPS production, but do not fill the SEO section.
+- Text and images are likely to be specified by the user. Use the specified content first.
+- Do not use the new Tabiiro production prompt for template changes. Use the dedicated template-change prompt and email format.
+- If the template-change direction differs from `簡易HPC→簡易HPS`, use the direction specified by the user in the email body.
 
 ## Output File Naming
 
@@ -211,6 +240,38 @@ If HPS is included, use slash-separated plan and dates:
 掲載開始日：0625/0727
 ```
 
+For 簡易HPSテンプレ変更, use this subject format:
+
+```text
+mmdd【自社簡易HP_テンプレ変更制作依頼】案件名
+```
+
+テンプレ変更 To:
+
+```text
+入稿 <nyukou@brangista.com>
+```
+
+テンプレ変更 Cc:
+
+```text
+BM開発制作課（WEBフォロー） <s_support@brangista.com>, 升本光典 <mitsunori_masumoto@brangista.com>, 加藤安耶 <aya_kato@brangista.com>
+```
+
+テンプレ変更 body format:
+
+```text
+お疲れ様です。
+
+表題案件について、簡易HPC→簡易HPS のテンプレ変更をお願いします。
+
+・クライアント：<案件名>
+
+・掲載開始日：<M月D日>
+
+・ファイル保管場所：<Box Web URL>
+```
+
 For 更新, use this subject format:
 
 ```text
@@ -260,6 +321,8 @@ Before responding final:
 - 更新 uses the `更新` Box folder, not `新規`.
 - 更新 email uses `契約更新制作依頼` and includes `【修正箇所】`.
 - 更新 sheet marks corrected cells yellow and corrected text red; rich text cells mark only changed words, and deletions are red with strikethrough.
+- HPS sheets preserve the template and separate `旅色用` and `HP用` image folders when submitted with a new Tabiiro listing.
+- HPS template-change requests do not fill SEO and use the dedicated template-change email.
 - Publication dates follow the 25th/next-business-day rule.
 - Workbook styles, dimensions, dropdowns, and validations are preserved.
 - `選択してください` placeholders are not polluted with `センタク`.
@@ -278,7 +341,19 @@ $tabiiro-submission-workflow を使って、以下の入稿を一括作成して
 区分：新規
 エリア：
 公開月または公開日：
-HPS有無：
+HPS入稿：あり／なし
+HPS入稿がある場合：
+・HP掲載開始日：
+・ベース色：
+・ロゴ指定：
+・メイン画像指定：
+・NEWS/TOPIX指定：
+・レコメンド指定：
+・背景画像指定：
+・電話ボタン色指定：
+・SEO指定：
+・SNS/外部リンク指定：
+・取得希望ドメイン指定：
 指定画像：
 指定文章：
 補足：
@@ -287,7 +362,19 @@ HPS有無：
 Short prompt:
 
 ```text
-$tabiiro-submission-workflow：案件名「丹波茶屋ゆらり」、プランTG5C、エリア京都、公開6月、新規、HPSなし。指定画像は添付優先で、入稿シート作成・Box格納・入稿メール案までお願いします。
+$tabiiro-submission-workflow：案件名「丹波茶屋ゆらり」、プランTG5C、エリア京都、公開6月、新規、HPS入稿なし。指定画像は添付優先で、入稿シート作成・Box格納・入稿メール案までお願いします。
+```
+
+HPS同時入稿 prompt:
+
+```text
+$tabiiro-submission-workflow：案件名「丹波茶屋ゆらり」、プランTG5C、エリア京都、公開6月、新規、HPS入稿あり。HPSのベース色は黒、ロゴ・メイン画像・SEO・希望ドメインは指定なしなので最適に選定してください。旅色用とHP用の画像フォルダを分け、入稿シート作成・Box格納・新規制作依頼メール案までお願いします。
+```
+
+HPSテンプレ変更 prompt:
+
+```text
+$tabiiro-submission-workflow：案件名「Over the Over」、掲載開始日7月27日、簡易HPC→簡易HPS のテンプレ変更制作依頼です。SEOは記載不要。指定文章・指定画像を優先し、Box格納とテンプレ変更依頼メール案までお願いします。
 ```
 
 更新 prompt:
