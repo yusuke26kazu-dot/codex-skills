@@ -6,6 +6,7 @@ Custom Codex skills backup and sharing repository.
 
 - tabiiro-application-check
 - tabiiro-application-forms
+- tabiiro-submission-workflow
 
 ## Install
 

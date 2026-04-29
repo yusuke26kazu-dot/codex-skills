@@ -1,0 +1,244 @@
+---
+name: tabiiro-submission-workflow
+description: Use when the user asks to prepare Tabiiro/旅色入稿 from an instruction through 入稿シート creation, image selection, Box Drive storage, and 入稿メール drafting for TG, TO, TL, TY, or HPS workflows.
+metadata:
+  short-description: 旅色入稿をシート作成からBox格納・メール案まで一括処理
+---
+
+# 旅色入稿ワークフロー
+
+Use this skill when the user gives a Tabiiro/旅色入稿 instruction and expects the full workflow: create the correct 入稿シート, prepare approved images, store everything in Box Drive, and draft the入稿メール.
+
+## Required Inputs
+
+Collect or infer these items before producing final files:
+
+- 案件名: 店舗名、施設名、商品名など。
+- プラン: `TG5A`, `TG5C`, `TL5`, `TO3`, `HPS` など。本文と案件フォルダ名ではABCを残し、Boxのプラン階層と出力ファイル名ではABCを外す。
+- 区分: `新規`, `更新`, `季節更新`。新規制作依頼なら `新規`。
+- エリア: `京都`, `大阪` のように都道府県を付けない表記。
+- 公開月または公開日: 月だけならその月の25日。25日が土日祝の場合は翌営業日。
+- HPS同時入稿の有無: 有の場合は本誌公開日の翌月25日をHP掲載開始日にし、土日祝なら翌営業日。
+- 指定画像、指定文章、申込用紙、補足条件がある場合はそれを優先する。
+
+If a required item cannot be inferred safely, ask only for that missing item and then continue.
+
+## Source Templates
+
+Default local template paths:
+
+- TG6: `C:\Users\NX023066\Downloads\入稿シート_TG6_【店舗名】_2025.1～.xlsx`
+- TG5: `C:\Users\NX023066\Downloads\入稿シート_TG5_【店舗名】_2021.4～ (1).xlsx`
+- TG4: `C:\Users\NX023066\Downloads\入稿シート_TG4_【店舗名】_2021.4～ (1).xlsx`
+- TG3: `C:\Users\NX023066\Downloads\入稿シート_TG3_【店舗名】_2021.4～.xlsx`
+- TG2: `C:\Users\NX023066\Downloads\入稿シート_TG2_【店舗名】_2021.4～.xlsx`
+- TO: `C:\Users\NX023066\Downloads\新入稿シート_TO●_【施設名】_23.04～.xlsx`
+- TL6: `C:\Users\NX023066\Downloads\レジャーTL6入稿シート_【施設名】202007改.xlsx`
+- TL5: `C:\Users\NX023066\Downloads\レジャーTL5入稿シート_【施設名】202007改.xlsx`
+- TL4: `C:\Users\NX023066\Downloads\レジャーTL4入稿シート_【施設名】202007改.xlsx`
+- TL3: `C:\Users\NX023066\Downloads\レジャーTL3入稿シート_【施設名】202306改.xlsx`
+- TL2: `C:\Users\NX023066\Downloads\レジャーTL2入稿シート_【施設名】.xlsx`
+- HPS: `C:\Users\NX023066\Downloads\入稿シート／自社簡易HP_S＋ドメイン【施設名】_250107.xlsx`
+
+Use the matching template for the requested plan. For TO, select the appropriate plan sheet inside the same workbook.
+
+## Excel Preservation Rules
+
+The final workbook must preserve the template's dropdowns, fonts, cell sizes, row heights, merged cells, formulas, and formatting.
+
+- Treat the original template as the source of truth.
+- Prefer direct OOXML patching of cell values and formula cached values for existing Tabiiro templates.
+- Do not round-trip the final workbook through tools that rebuild workbook XML if they change styles or data validations.
+- Avoid saving final Tabiiro templates with `openpyxl` unless you have verified it preserves the needed validations. It can remove x14 dropdown validations.
+- Keep existing label text such as `TEL：`, `FAX：`, `緯度：`, `経度：`, `昼：`, `夜：`, and write values after the colon in the same cell.
+- Do not allow `選択してください。センタク` or any similar phonetic helper text to appear. Dropdown placeholders should remain only `選択してください`.
+- Leave LP用キーワード blank unless the user explicitly asks otherwise.
+
+Before delivery, compare the output with the template:
+
+- `xl/styles.xml` should be unchanged unless there is an intentional style edit.
+- Data validation counts, including x14 validations, should match the template.
+- Cell dimensions and visible text should not be accidentally altered.
+
+## TG Fill Rules
+
+For TG2 through TG6, fill basic information consistently:
+
+- 店舗名: use the instructed案件名.
+- 店舗名ふりがな: hiragana.
+- TEL/FAX: research online or use a prior申込用紙 if available. Enter after `TEL：` and `FAX：`.
+- 掲載エリアガイド: choose from the existing dropdown based on address.
+- 東京旅グルメジャンル: leave unchanged unless instructed.
+- プレミアブック: choose `有` only for Sapporo, Kanagawa, Nagoya, Osaka, Kyoto, or Fukuoka restaurants when web sources indicate average spend over 10,000 yen. Otherwise leave untouched.
+- 緯度/経度: use the map pin for the address and enter after `緯度：` and `経度：`.
+- HP fields: own-domain official site only. If HPS is simultaneous, choose `無` and replace the URL cell with `簡易HP同時入稿のため`.
+- SNS: enter active Twitter/X, Facebook, and Instagram URLs. If dormant, consult the user.
+- 営業時間: use `10:00～14:00` style after `昼：` and `夜：`. Set lunch flag `有` or `無`.
+- 席数: enter number of seats.
+- 平均予算: preserve `昼：` and `夜：`; use the most appropriate form such as `1,000円～2,000円` or `2,000円`.
+- アクセス: preserve the template format. For train access, use Google Maps walking time. If no nearby train, use bus stop and route. For car access, use `〇〇高速道路〇〇ICより約〇分`.
+- 駐車場: choose `有` or `無`. If no parking but coin parking exists, write `近隣にコインパーキングあり` in the count/detail cell.
+- 業態: choose the most relevant main genre from the dropdown. Select subgenres only when they genuinely fit.
+- カード利用 and other cashless: choose from dropdowns.
+- 店舗情報 flags: choose best values for 個室, 禁煙, 飲み放題, 座敷, 駅徒歩, 貸切, 食べ放題, テイクアウト.
+- 衛生情報 and hygiene rows such as 手指 are not filled; leave existing values unchanged.
+
+## Text And Image Rules
+
+- For fields with stated character counts, write to roughly the stated count plus about 10 Japanese characters.
+- User-provided text and images override web research.
+- If images are not provided, source from official or reliable web pages and record the source.
+- Do not use images with visible text overlays, black-and-white or clearly processed styling, people looking into the camera, or suspicious edits.
+- Use only images that satisfy the workbook's required size and aspect ratio.
+- Assign selected images numbered filenames such as `画像_01.jpg`, `画像_02.jpg`, or the workbook's requested image names, then enter those names in the relevant cells.
+- 店舗情報画像_01 and 店舗情報画像_02 must match their nearby copy. For example, do not pair an interior description with a food-only image.
+- Put only the selected/used images into the delivery image folder.
+
+## Output File Naming
+
+The generated入稿シート filename must show the plan without ABC and the案件名:
+
+```text
+入稿シート_<プランABCなし>_【<案件名>】.xlsx
+```
+
+Example:
+
+```text
+入稿シート_TG5_【丹波茶屋ゆらり】.xlsx
+```
+
+## Box Storage
+
+Default Box Drive base path:
+
+```text
+C:\Users\NX023066\Box\01_【公式】契約クライアント\★入稿フォルダ【全支店】\05_大阪
+```
+
+Plan category map:
+
+- TG: `002_飲食`
+- TO: `001_お取り寄せ`
+- TY: `003_宿`
+- TL: `004_レジャー`
+
+Folder flow:
+
+1. Go to the category folder.
+2. Use or create `yyyymmdd_エリア`.
+3. Use or create `新規`, `更新`, or `季節更新`.
+4. Use or create the plan folder without ABC, such as `TG5` or `TL5`.
+5. Inside it, create `mmdd_<プランABCあり>_<案件名>`.
+6. Put the generated Excel file in that folder.
+7. Create `画像` inside it and put the selected/used image files there.
+
+Example:
+
+```text
+...\002_飲食\20260625_京都\新規\TG5\0625_TG5A_丹波茶屋ゆらり
+```
+
+For the入稿メール, use a Web Box URL such as `https://app.box.com/folder/<folder-id>`, not the local Box Drive path. When possible, find the folder ID from Box Drive metadata. If the Web URL cannot be discovered, report the local path and ask the user to copy the Box web link.
+
+## 入稿メール
+
+Draft the email whenever an入稿指示 is handled.
+
+To:
+
+```text
+入稿 <nyukou@brangista.com>
+```
+
+Cc:
+
+```text
+升本光典 <mitsunori_masumoto@brangista.com>, 寺内功次 <koji_terauchi@brangista.com>, 加藤安耶 <aya_kato@brangista.com>, 長杉菜月 <natsuki_nagasugi@brangista.com>, 長尾茜 <akane_nagao@brangista.com>, 大歳悠乃 <yuno_otoshi@brangista.com>, 谷内理彩 <risa_taniuchi@brangista.com>, 山口菜美 <nami_yamaguchi@brangista.com>, 岡田芽生 <mei_okada@brangista.com>
+```
+
+Subject format:
+
+```text
+mmdd【エリア_<プランABCあり>_新規制作依頼】案件名
+```
+
+If HPS is included:
+
+```text
+mmdd【エリア_<プランABCあり>_HPS_新規制作依頼】案件名
+```
+
+Do not put the HP掲載開始日 in the subject.
+
+Body format:
+
+```text
+お疲れ様です。
+
+表題案件の新規制作をお願いいたします。
+
+クライアント名：<案件名>
+
+掲載プラン：<プランABCあり>
+
+掲載開始日：<mmdd>
+
+ファイル保管場所：<Box Web URL>
+
+以上、よろしくお願いいたします。
+```
+
+If HPS is included, use slash-separated plan and dates:
+
+```text
+掲載プラン：TG5A/HPS
+掲載開始日：0625/0727
+```
+
+## Date Rules
+
+- Main publication date: requested month/day. If the user only gives a month, use the 25th.
+- If that date falls on Saturday, Sunday, or a Japanese national holiday, use the next business day.
+- HPS publication date: the next month's 25th after the main publication date, also adjusted to the next business day.
+- Format date folders as `yyyymmdd`, and email/case folder dates as `mmdd`.
+
+Use a reliable holiday source or known Japanese holiday calendar for the relevant year before finalizing dates.
+
+## Validation Checklist
+
+Before responding final:
+
+- Correct template and plan were used.
+- Output filename uses plan without ABC and案件名.
+- Email body and case folder use plan with ABC.
+- Box plan folder uses plan without ABC.
+- Publication dates follow the 25th/next-business-day rule.
+- Workbook styles, dimensions, dropdowns, and validations are preserved.
+- `選択してください` placeholders are not polluted with `センタク`.
+- Required web-researched fields are filled or clearly noted as unresolved.
+- Images are compliant, numbered, copied into `画像`, and referenced in the workbook.
+- Box Web URL is included in the email draft when discoverable.
+
+## User Prompt Templates
+
+Full prompt:
+
+```text
+$tabiiro-submission-workflow を使って、以下の入稿を一括作成してください。
+案件名：
+プラン：
+区分：新規
+エリア：
+公開月または公開日：
+HPS有無：
+指定画像：
+指定文章：
+補足：
+```
+
+Short prompt:
+
+```text
+$tabiiro-submission-workflow：案件名「丹波茶屋ゆらり」、プランTG5C、エリア京都、公開6月、新規、HPSなし。指定画像は添付優先で、入稿シート作成・Box格納・入稿メール案までお願いします。
+```
