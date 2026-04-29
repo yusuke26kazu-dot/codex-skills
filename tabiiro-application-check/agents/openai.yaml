@@ -1,0 +1,3 @@
+display_name: 申込書チェック
+short_description: 申込書と管理システムの不備照合チェック
+default_prompt: 申込書チェック

@@ -1,0 +1,3 @@
+display_name: 申込書作成
+short_description: 旅色の獲得プラン情報から申込書Excelを作成します。
+default_prompt: 掲載月、獲得金額、本誌プラン名、新着有無を入力してください。申込書Excelを作成します。
