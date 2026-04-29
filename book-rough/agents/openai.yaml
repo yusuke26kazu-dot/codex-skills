@@ -1,0 +1,4 @@
+interface:
+  display_name: "BOOKラフ"
+  short_description: "BOOKラフPowerPointに店舗名と3枚の店舗画像を配置する"
+  default_prompt: "BOOKラフで作成してください。添付のPowerPointを使って、店名："
