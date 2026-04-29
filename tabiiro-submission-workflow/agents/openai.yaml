@@ -1,6 +1,6 @@
 interface:
   display_name: "旅色入稿ワークフロー"
-  short_description: "入稿シート作成、Box格納、メール案まで一括処理"
+  short_description: "新規・更新入稿をBox格納、メール案まで一括処理"
   brand_color: "#0F766E"
   default_prompt: "$tabiiro-submission-workflow を使って、旅色の入稿シート作成・Box格納・入稿メール案まで一括で進めてください。"
 

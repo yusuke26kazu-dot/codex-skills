@@ -1,6 +1,6 @@
 ---
 name: tabiiro-submission-workflow
-description: Use when the user asks to prepare Tabiiro/旅色入稿 from an instruction through 入稿シート creation, image selection, Box Drive storage, and 入稿メール drafting for TG, TO, TL, TY, or HPS workflows.
+description: Use when the user asks to prepare Tabiiro/旅色入稿 from an instruction through 入稿シート creation or update marking, image selection, Box Drive storage, and 入稿メール drafting for TG, TO, TL, TY, or HPS workflows.
 metadata:
   short-description: 旅色入稿をシート作成からBox格納・メール案まで一括処理
 ---
@@ -15,7 +15,7 @@ Collect or infer these items before producing final files:
 
 - 案件名: 店舗名、施設名、商品名など。
 - プラン: `TG5A`, `TG5C`, `TL5`, `TO3`, `HPS` など。本文と案件フォルダ名ではABCを残し、Boxのプラン階層と出力ファイル名ではABCを外す。
-- 区分: `新規`, `更新`, `季節更新`。新規制作依頼なら `新規`。
+- 区分: `新規`, `更新`, `季節更新`。新規制作依頼なら `新規`。契約更新制作依頼なら `更新`。
 - エリア: `京都`, `大阪` のように都道府県を付けない表記。
 - 公開月または公開日: 月だけならその月の25日。25日が土日祝の場合は翌営業日。
 - HPS同時入稿の有無: 有の場合は本誌公開日の翌月25日をHP掲載開始日にし、土日祝なら翌営業日。
@@ -83,6 +83,19 @@ For TG2 through TG6, fill basic information consistently:
 - 店舗情報 flags: choose best values for 個室, 禁煙, 飲み放題, 座敷, 駅徒歩, 貸切, 食べ放題, テイクアウト.
 - 衛生情報 and hygiene rows such as 手指 are not filled; leave existing values unchanged.
 
+## 更新入稿 Rules
+
+Use these rules when 区分 is `更新` or the user asks for 更新制作/契約更新制作. 更新入稿 assumes the public page already exists, so only apply the user-instructed corrections. Do not newly fill unrelated fields from web research unless the user asks.
+
+- Edit only the instructed cells or image references.
+- Mark every corrected cell with yellow fill.
+- For basic information corrections and image filename cells, overwrite the cell with the new value, set the cell fill to yellow, and set the cell text to red.
+- For image changes, the newly supplied image file name must match the image name being overwritten in the sheet. Rename the supplied image file if needed, then copy it into the `画像` folder.
+- For text cells with character counts, copy the original text first, then change only the instructed part. Apply rich text formatting so only the changed words are red.
+- If the instruction is to delete words rather than replace them, keep the deleted words in place, make only those words red, and add strikethrough.
+- Preserve unchanged surrounding text, formulas, character-count cells, validations, and formatting.
+- If rich text is required, patch the sheet XML with inline rich text runs or use an Excel automation method that preserves existing workbook formatting. Verify that unmodified text remains unmarked.
+
 ## Text And Image Rules
 
 - For fields with stated character counts, write to roughly the stated count plus about 10 Japanese characters.
@@ -139,6 +152,8 @@ Example:
 ...\002_飲食\20260625_京都\新規\TG5\0625_TG5A_丹波茶屋ゆらり
 ```
 
+For 更新, use the `更新` folder at the same level as `新規`. Create it if missing.
+
 For the入稿メール, use a Web Box URL such as `https://app.box.com/folder/<folder-id>`, not the local Box Drive path. When possible, find the folder ID from Box Drive metadata. If the Web URL cannot be discovered, report the local path and ask the user to copy the Box web link.
 
 ## 入稿メール
@@ -157,7 +172,7 @@ Cc:
 升本光典 <mitsunori_masumoto@brangista.com>, 寺内功次 <koji_terauchi@brangista.com>, 加藤安耶 <aya_kato@brangista.com>, 長杉菜月 <natsuki_nagasugi@brangista.com>, 長尾茜 <akane_nagao@brangista.com>, 大歳悠乃 <yuno_otoshi@brangista.com>, 谷内理彩 <risa_taniuchi@brangista.com>, 山口菜美 <nami_yamaguchi@brangista.com>, 岡田芽生 <mei_okada@brangista.com>
 ```
 
-Subject format:
+For 新規, use this subject format:
 
 ```text
 mmdd【エリア_<プランABCあり>_新規制作依頼】案件名
@@ -171,7 +186,7 @@ mmdd【エリア_<プランABCあり>_HPS_新規制作依頼】案件名
 
 Do not put the HP掲載開始日 in the subject.
 
-Body format:
+For 新規, use this body format:
 
 ```text
 お疲れ様です。
@@ -196,6 +211,35 @@ If HPS is included, use slash-separated plan and dates:
 掲載開始日：0625/0727
 ```
 
+For 更新, use this subject format:
+
+```text
+mmdd【エリア_<プランABCあり>_In無_契約更新制作依頼】案件名
+```
+
+If the user specifies `In有` or another inclusion flag, use that value instead of `In無`. Keep the plan with ABC in the subject.
+
+For 更新, list the corrected item names in the body under `【修正箇所】`. Use the item names supplied by the user, such as `LP用画像2～4` or `おすすめポイント①画像`.
+
+更新 body format:
+
+```text
+お疲れ様です。
+下記の案件の更新制作をお願いします。
+
+【修正箇所】
+・<修正箇所1>
+・<修正箇所2>
+-----------------------------------------------------------------------------------
+・クライアント：<案件名>
+・掲載プラン:<プランABCあり>_In無
+・掲載日：<mmdd>
+・掲載エリア：<エリア>
+・ファイル保管場所：<Box Web URL>
+
+宜しくお願いします。
+```
+
 ## Date Rules
 
 - Main publication date: requested month/day. If the user only gives a month, use the 25th.
@@ -213,6 +257,9 @@ Before responding final:
 - Output filename uses plan without ABC and案件名.
 - Email body and case folder use plan with ABC.
 - Box plan folder uses plan without ABC.
+- 更新 uses the `更新` Box folder, not `新規`.
+- 更新 email uses `契約更新制作依頼` and includes `【修正箇所】`.
+- 更新 sheet marks corrected cells yellow and corrected text red; rich text cells mark only changed words, and deletions are red with strikethrough.
 - Publication dates follow the 25th/next-business-day rule.
 - Workbook styles, dimensions, dropdowns, and validations are preserved.
 - `選択してください` placeholders are not polluted with `センタク`.
@@ -241,4 +288,10 @@ Short prompt:
 
 ```text
 $tabiiro-submission-workflow：案件名「丹波茶屋ゆらり」、プランTG5C、エリア京都、公開6月、新規、HPSなし。指定画像は添付優先で、入稿シート作成・Box格納・入稿メール案までお願いします。
+```
+
+更新 prompt:
+
+```text
+$tabiiro-submission-workflow：案件名「鮨ふみ」、プランTG3A、エリア大阪、掲載日0525、区分更新、In無。修正箇所は「LP用画像2～4」「おすすめポイント①画像」です。指定画像は上書き対象の画像名に合わせ、修正セルは黄色、修正文字は赤で、Box格納と更新入稿メール案までお願いします。
 ```
