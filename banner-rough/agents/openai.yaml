@@ -1,0 +1,8 @@
+interface:
+  display_name: "バナーラフ"
+  short_description: "URLのHPスクショに旅色系バナーを自然に差し込む"
+  default_prompt: |
+    $banner-rough を使ってバナーラフを作ってください。
+    URL：
+    バナー：既定の女優バナー
+    余白指定：なし
