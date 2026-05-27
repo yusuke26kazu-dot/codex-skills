@@ -1,4 +1,4 @@
 ﻿interface:
   display_name: "旅色更新営業リサーチ"
-  short_description: "店名から旅色掲載状況・SNS Excel履歴・海外版・ランキング・記事数値を調査"
-  default_prompt: "店名を伝えるので、旅色更新営業向けの①～⑤調査を実施してください。"
+  short_description: "店名から旅色掲載状況・SNS Excel履歴・海外版・ランキング・記事数値・TG提案書を作成"
+  default_prompt: "店名を伝えるので、旅色更新営業向けの①～⑤調査とTG提案書作成を実施してください。"

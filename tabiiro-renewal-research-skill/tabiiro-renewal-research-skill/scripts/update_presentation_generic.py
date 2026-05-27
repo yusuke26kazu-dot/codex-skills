@@ -412,23 +412,31 @@ def capture_electronic_magazine(magazine_url, shop_id, output_dir):
                 try: os.remove(full_before_path)
                 except Exception: pass
             
-            # 2. Click shop pop-up list
-            popup_selector = f"#ID{shop_id} .item_list a"
-            detail_btn = page.locator(popup_selector).first
-            if detail_btn.count() > 0:
-                print("Clicking detail button for popup...")
-                detail_btn.click()
-                page.wait_for_timeout(2000)
-                
-                popup_inner = page.locator(f"#ID{shop_id} .popup_inner").first
-                if popup_inner.count() > 0:
+            # 2. Click shop detail; Tabiiro book layouts vary by template generation.
+            detail_selectors = [
+                f"#ID{shop_id} .item_list a",
+                f"#ID{shop_id}_inner .btn_detail a",
+                f"#ID{shop_id} .btn_detail a",
+            ]
+            for popup_selector in detail_selectors:
+                detail_btn = page.locator(popup_selector).first
+                if detail_btn.count() > 0:
+                    print(f"Clicking detail button for popup: {popup_selector}")
+                    detail_btn.click()
+                    page.wait_for_timeout(2000)
+                    break
+
+            popup_candidates = [
+                f"#ID{shop_id} .popup_inner",
+                f"#ID{shop_id}",
+            ]
+            for popup_selector in popup_candidates:
+                popup_inner = page.locator(popup_selector).first
+                if popup_inner.count() > 0 and popup_inner.is_visible():
                     popup_inner.screenshot(path=os.path.join(output_dir, "magazine_after.png"))
                     browser.close()
                     return True
-                else:
-                    print("Warning: popup_inner not found.")
-            else:
-                print(f"Warning: Detail button with selector {popup_selector} not found.")
+            print(f"Warning: electronic magazine detail area for {shop_id} not found.")
         except Exception as e:
             print(f"Error during magazine capture: {e}")
         browser.close()
@@ -546,12 +554,12 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
         except Exception: pass
     os.makedirs(img_dir, exist_ok=True)
     
-    # 1. Fetch magazine pop-up (TG5 only)
+    # 1. Fetch magazine pop-up
     has_magazine = False
     magazine_url = get_magazine_url(lp_url) if lp_url else None
     area_name = get_area_guide_name(prefecture, address)
     
-    if selected_plan == "TG5" and magazine_url:
+    if selected_plan in ["TG4", "TG5"] and magazine_url:
         print(f"Found electronic magazine: {magazine_url}")
         if capture_electronic_magazine(magazine_url, shop_id, img_dir):
             has_magazine = True
@@ -598,7 +606,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
                 "url": item["url"],
                 "code_idx": item.get("code_idx")
             })
-    counts = capture_theme_ranking_screenshots(rank_screenshots_params, shop_name.split(' ')[0], img_dir)
+    counts = capture_theme_ranking_screenshots(rank_screenshots_params, shop_name, img_dir)
     
     # 5. Load PowerPoint template
     local_temp_path = os.path.abspath("temp_processing.pptx")
@@ -690,6 +698,8 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
                 
             new_slide = genre_base_slide.Duplicate().Item(1)
             replace_text_in_shapes(new_slide.Shapes, "○①○○○○（ジャンル）", name)
+            replace_text_in_shapes(new_slide.Shapes, "○①○○○○", name)
+            replace_text_in_shapes(new_slide.Shapes, "○○○○", name)
             replace_text_in_shapes(new_slide.Shapes, "（ジャンル）", "")
             replace_text_in_shapes(new_slide.Shapes, "●位", rank)
             
@@ -798,7 +808,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
                 slide.Delete()
                 continue
                 
-            if "TG5" in matched_magazines and has_magazine:
+            if selected_plan in matched_magazines and has_magazine:
                 replace_text_in_shapes(slide.Shapes, "○○エリアガイド", f"{area_name}エリアガイド")
                 
                 # Delete placeholders
@@ -849,6 +859,9 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
         if "繁体字版旅色" in text_content:
             top_path = os.path.join(img_dir, "lp_tw", "lp_top.png")
             bottom_path = os.path.join(img_dir, "lp_tw", "lp_bottom.png")
+            if not os.path.exists(top_path) or not os.path.exists(bottom_path):
+                slide.Delete()
+                continue
             if os.path.exists(top_path) and os.path.exists(bottom_path):
                 pic1 = slide.Shapes.AddPicture(top_path, False, True, 0, 0, -1, -1)
                 pic1.LockAspectRatio = -1
@@ -865,6 +878,9 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
         if "英語版旅色" in text_content:
             top_path = os.path.join(img_dir, "lp_en", "lp_top.png")
             bottom_path = os.path.join(img_dir, "lp_en", "lp_bottom.png")
+            if not os.path.exists(top_path) or not os.path.exists(bottom_path):
+                slide.Delete()
+                continue
             if os.path.exists(top_path) and os.path.exists(bottom_path):
                 pic1 = slide.Shapes.AddPicture(top_path, False, True, 0, 0, -1, -1)
                 pic1.LockAspectRatio = -1
@@ -964,6 +980,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
         table_config = config.get("monthly_views_table", {})
         headers = table_config.get("headers", ["月", "合計", "平均"])
         views_data = table_config.get("views", ["表示回数", "0", "0"])
+        table_font_size = 8 if len(headers) > 12 else 10
         
         tbl_shape = views_slide.Shapes.AddTable(
             NumRows=2,
@@ -982,7 +999,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
             cell.Shape.TextFrame.TextRange.Text = h_text
             font = cell.Shape.TextFrame.TextRange.Font
             font.Name = "游ゴシック"
-            font.Size = 10
+            font.Size = table_font_size
             font.Bold = True
             font.Color.RGB = 16777215 # White
             cell.Shape.TextFrame.TextRange.ParagraphFormat.Alignment = 2
@@ -994,7 +1011,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
             cell.Shape.TextFrame.TextRange.Text = v_text
             font = cell.Shape.TextFrame.TextRange.Font
             font.Name = "游ゴシック"
-            font.Size = 10
+            font.Size = table_font_size
             font.Bold = (c_idx == 0 or c_idx >= len(headers) - 2)
             font.Color.RGB = 0 # Black
             cell.Shape.TextFrame.TextRange.ParagraphFormat.Alignment = 2
