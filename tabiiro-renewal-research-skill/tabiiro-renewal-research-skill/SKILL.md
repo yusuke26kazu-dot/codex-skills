@@ -105,8 +105,8 @@ description: Perform Tabiiro/旅色 renewal-sales research from a shop or facili
 
 ### ① テンプレートPPTXの場所
 * PowerPointのベースとなるオリジナルテンプレートは、リポジトリ内の以下に配置されたファイルを使用します。
-  ➔ **`tabiiro-renewal-research-skill/templates/施設専用資料テンプレ（TG）260316.pptx`**
-  ※各パソコン環境でそのまま動作するように、スクリプト内からは相対パス（`templates/...`）で読み込んでください。
+  ➔ **`tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/templates/施設専用資料テンプレ（TG）260316.pptx`**
+  ※各パソコン環境でそのまま動作するように、スクリプト内からは相対パス（`../templates/...`）で読み込んでください。
 
 ### ② スライドへの調査結果の反映ルール
 調査結果のデータを、以下のスライド（テンプレートスライドの複製・編集）へ自動的に流し込みます。
@@ -177,4 +177,72 @@ description: Perform Tabiiro/旅色 renewal-sales research from a shop or facili
 * `scripts/search_xlsx.py`: 指定されたExcelファイルの全セルから店舗名やIDを検索するスクリプト（事前調査で使用）。
 * `scripts/instagram_history.py`: 旅色SNS営業支援投稿のExcelファイルからInstagramの投稿履歴を検索・抽出するスクリプト（事前調査で使用）。
 * `scripts/article_metrics.py`: 記事数値管理シートから指定記事スラグの最新3ヶ月合計PV数やGoogle10位以内のキーワードを自動算出するスクリプト（事前調査で使用）。
-* `update_presentation_generic.py`: **任意の店舗の事前調査結果（JSON形式など）に基づいて、上記のPowerPoint作成ルールを完全に自動適用する汎用提案書作成スクリプト**。
+* `scripts/update_presentation_generic.py`: **任意の店舗の事前調査結果（以下のJSON形式など）に基づいて、上記のPowerPoint作成ルールを完全に自動適用する汎用提案書作成スクリプト**。
+
+### 💡 汎用提案書作成スクリプト用 JSON Config 仕様例
+スクリプトを実行する際は、事前精査で得られたデータを以下のフォーマット（JSONファイル）で記述し、引数 `--config` として渡すことで動的にスライドが構築されます。
+
+```json
+{
+  "shop_id": "315399",
+  "shop_name": "epice エピス",
+  "prefecture": "京都府",
+  "address": "京都府京都市上京区...",
+  "selected_plan": "TG5",
+  "lp_url": "https://tabiiro.jp/gourmet/s/315399-kyoto-epice/",
+  "tw_lp_url": "https://tw.tabiiro.travel/gourmet/s/315399-kyoto-epice/",
+  "en_lp_url": "https://en.tabiiro.travel/gourmet/s/315399-kyoto-epice/",
+  "super_themes": [
+    {
+      "name": "高級店・高級レストラン",
+      "url": "https://tabiiro.jp/gourmet/theme/high-class-restaurant/ranking/kinki/kyoto/",
+      "rank": "1位",
+      "slug": "high-class-restaurant"
+    }
+  ],
+  "normal_themes": [
+    {
+      "name": "ワインがおいしいレストラン",
+      "url": "https://tabiiro.jp/theme/wine/",
+      "rank": "?",
+      "slug": "wine"
+    }
+  ],
+  "seo_articles": [
+    {
+      "keyword": "京都 ランチ おしゃれ",
+      "url": "https://tabiiro.jp/gourmet/article/kyoto-lunch-oshare/",
+      "rank": "1位",
+      "views": "8,389"
+    }
+  ],
+  "genre_rankings": [
+    {
+      "name": "高級店",
+      "url": "https://tabiiro.jp/gourmet/theme/high-class-restaurant/ranking/kinki/kyoto/",
+      "rank": "1位",
+      "list_count": 20,
+      "code_idx": 0
+    }
+  ],
+  "has_sns": false,
+  "has_instagram": false,
+  "has_facebook": false,
+  "roi_sim": {
+    "monthly_views": 4929,
+    "unit_price": 8000,
+    "number_of_people": 2,
+    "visit_rate": 0.1,
+    "investment_cost": 25000
+  },
+  "monthly_views_table": {
+    "headers": ["月", "10月", "11月", "12月", "1月", "2月", "3月", "4月", "合計", "平均"],
+    "views": ["表示回数", "4,958", "4,644", "3,682", "4,139", "4,615", "4,911", "7,557", "34,506", "4,929"]
+  }
+}
+```
+
+* **実行例**:
+  ```bash
+  python tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/scripts/update_presentation_generic.py --config epice_config.json --output "epice_Proposal.pptx"
+  ```

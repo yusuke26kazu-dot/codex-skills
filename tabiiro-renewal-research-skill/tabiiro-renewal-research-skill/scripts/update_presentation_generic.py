@@ -624,8 +624,10 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
     seo_base_slide = pres.Slides(seo_base_idx) if seo_base_idx != -1 else None
     genre_base_slide = pres.Slides(genre_base_idx) if genre_base_idx != -1 else None
     
-    # A. Title Slide 1
-    replace_text_in_shapes(pres.Slides(1).Shapes, "〇〇〇〇 御社名", f"{shop_name} 様")
+    # A. Title Slide 1 (Support various placeholder formats safely)
+    placeholders = ["○○○○○○○○", "〇〇〇〇〇〇〇〇", "○○○○", "〇〇〇〇", "〇〇〇〇 御社名"]
+    for ph in placeholders:
+        replace_text_in_shapes(pres.Slides(1).Shapes, ph, shop_name)
     
     # B. Super Theme Slides (②)
     if super_theme_base_slide:
@@ -1027,7 +1029,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     template_path = args.template
     if not template_path:
-        template_path = os.path.join(script_dir, "templates", "施設専用資料テンプレ（TG）260316.pptx")
+        template_path = os.path.abspath(os.path.join(script_dir, "..", "templates", "施設専用資料テンプレ（TG）260316.pptx"))
         
     template_path = os.path.abspath(template_path)
     output_path = os.path.abspath(args.output)
