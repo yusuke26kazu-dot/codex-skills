@@ -433,6 +433,15 @@ def capture_electronic_magazine(magazine_url, shop_id, output_dir):
             for popup_selector in popup_candidates:
                 popup_inner = page.locator(popup_selector).first
                 if popup_inner.count() > 0 and popup_inner.is_visible():
+                    overlay_path = os.path.join(output_dir, "magazine_after_overlay.png")
+                    try:
+                        contents_elem_after = page.locator("#contents").first
+                        if contents_elem_after.count() > 0:
+                            contents_elem_after.screenshot(path=overlay_path)
+                        else:
+                            page.screenshot(path=overlay_path)
+                    except Exception:
+                        pass
                     popup_inner.screenshot(path=os.path.join(output_dir, "magazine_after.png"))
                     browser.close()
                     return True
@@ -822,22 +831,39 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
                     
                 # Paste magazine popup screens
                 before_path = os.path.join(img_dir, "magazine_before.png")
-                if os.path.exists(before_path):
-                    pic_before = slide.Shapes.AddPicture(before_path, False, True, 0, 0, -1, -1)
-                    pic_before.LockAspectRatio = 0
-                    pic_before.Width = 8.3 * 28.346
-                    pic_before.Height = 11.65 * 28.346
-                    pic_before.Left = 4.25 * 28.346
-                    pic_before.Top = 4.7 * 28.346
-                    
                 after_path = os.path.join(img_dir, "magazine_after.png")
-                if os.path.exists(after_path):
-                    pic_after = slide.Shapes.AddPicture(after_path, False, True, 0, 0, -1, -1)
-                    pic_after.LockAspectRatio = 0
-                    pic_after.Width = 13.88 * 28.346
-                    pic_after.Height = 9.72 * 28.346
-                    pic_after.Left = 13.1 * 28.346
-                    pic_after.Top = 5.65 * 28.346
+                after_overlay_path = os.path.join(img_dir, "magazine_after_overlay.png")
+                if selected_plan == "TG4":
+                    if os.path.exists(before_path):
+                        pic_before = slide.Shapes.AddPicture(before_path, False, True, 0, 0, -1, -1)
+                        pic_before.LockAspectRatio = -1
+                        pic_before.Height = 12.69 * 28.346
+                        pic_before.Left = 5.82 * 28.346
+                        pic_before.Top = 4.32 * 28.346
+
+                    if os.path.exists(after_path):
+                        pic_after = slide.Shapes.AddPicture(after_path, False, True, 0, 0, -1, -1)
+                        pic_after.LockAspectRatio = -1
+                        pic_after.Height = 12.64 * 28.346
+                        pic_after.Left = 15.23 * 28.346
+                        pic_after.Top = 4.29 * 28.346
+                else:
+                    if os.path.exists(before_path):
+                        pic_before = slide.Shapes.AddPicture(before_path, False, True, 0, 0, -1, -1)
+                        pic_before.LockAspectRatio = 0
+                        pic_before.Width = 8.3 * 28.346
+                        pic_before.Height = 11.65 * 28.346
+                        pic_before.Left = 4.25 * 28.346
+                        pic_before.Top = 4.7 * 28.346
+
+                    tg5_after_path = after_overlay_path if os.path.exists(after_overlay_path) else after_path
+                    if os.path.exists(tg5_after_path):
+                        pic_after = slide.Shapes.AddPicture(tg5_after_path, False, True, 0, 0, -1, -1)
+                        pic_after.LockAspectRatio = 0
+                        pic_after.Width = 13.88 * 28.346
+                        pic_after.Height = 9.72 * 28.346
+                        pic_after.Left = 13.1 * 28.346
+                        pic_after.Top = 5.65 * 28.346
                     
         # Update LPs
         if "御社専用の" in text_content and "ランディングページ" in text_content:
