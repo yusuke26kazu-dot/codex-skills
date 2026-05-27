@@ -243,6 +243,11 @@ description: Perform Tabiiro/旅色 renewal-sales research from a shop or facili
 ```
 
 * **実行例**:
-  ```bash
-  python tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/scripts/update_presentation_generic.py --config epice_config.json --output "epice_Proposal.pptx"
-  ```
+  * **スキル本体ディレクトリ内から実行する場合 (推奨)**:
+    ```bash
+    python scripts/update_presentation_generic.py --config examples/epice_config.json --output output/提案書.pptx
+    ```
+  * **プロジェクトルートから実行する場合**:
+    ```bash
+    python tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/scripts/update_presentation_generic.py --config tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/examples/epice_config.json --output output/提案書.pptx
+    ```
