@@ -141,6 +141,185 @@ def replace_picture_on_slide(slide, img_path, left_cm, top_cm, width_cm, height_
     pic.LockAspectRatio = 0
     return pic
 
+def _summary_value(value):
+    if value is None or value == "":
+        return ""
+    if isinstance(value, bool):
+        return "あり" if value else "なし"
+    if isinstance(value, (list, tuple)):
+        return " / ".join(str(v) for v in value if v not in (None, ""))
+    return str(value)
+
+def _summary_item_line(item):
+    if not isinstance(item, dict):
+        return f"- {_summary_value(item)}"
+
+    field_labels = [
+        ("name", "名称"),
+        ("title", "タイトル"),
+        ("keyword", "キーワード"),
+        ("rank", "順位"),
+        ("views", "表示回数"),
+        ("url", "URL"),
+        ("account", "アカウント"),
+        ("date", "日付"),
+        ("sheet", "シート"),
+        ("row", "行"),
+        ("status", "判定"),
+        ("note", "補足"),
+        ("source", "出典"),
+        ("list_count", "掲載数"),
+        ("area_rank", "エリア順位"),
+        ("area_label", "エリア"),
+    ]
+    parts = []
+    used_keys = set()
+    for key, label in field_labels:
+        value = _summary_value(item.get(key))
+        if value:
+            parts.append(f"{label}: {value}")
+            used_keys.add(key)
+
+    for key, value in item.items():
+        if key in used_keys or key in {"slug", "code_idx"}:
+            continue
+        text = _summary_value(value)
+        if text:
+            parts.append(f"{key}: {text}")
+
+    return "- " + (" / ".join(parts) if parts else str(item))
+
+def _summary_add_items(lines, title, items, empty_text="該当なし"):
+    lines.append(f"### {title}")
+    if not items:
+        lines.append(f"- {empty_text}")
+        lines.append("")
+        return
+    if isinstance(items, dict):
+        items = [items]
+    for item in items:
+        lines.append(_summary_item_line(item))
+    lines.append("")
+
+def _summary_add_kv(lines, title, values):
+    lines.append(f"### {title}")
+    has_value = False
+    for label, value in values:
+        text = _summary_value(value)
+        if text:
+            lines.append(f"- {label}: {text}")
+            has_value = True
+    if not has_value:
+        lines.append("- 該当情報なし")
+    lines.append("")
+
+def generate_research_summary(config, output_pptx_path, summary_output_path=None, derived=None):
+    derived = derived or {}
+    if not summary_output_path:
+        base, _ = os.path.splitext(output_pptx_path)
+        summary_output_path = base + "_精査まとめ.md"
+
+    shop_name = config.get("shop_name", "対象店舗")
+    lines = [
+        f"# {shop_name} 精査まとめ",
+        "",
+        "## 基本情報",
+        f"- 店舗名: {shop_name}",
+        f"- 店舗ID: {_summary_value(config.get('shop_id')) or '未設定'}",
+        f"- プラン: {_summary_value(config.get('selected_plan')) or '未設定'}",
+        f"- 都道府県: {_summary_value(config.get('prefecture')) or '未設定'}",
+        f"- 住所: {_summary_value(config.get('address')) or '未設定'}",
+        f"- 生成PPTX: {output_pptx_path}",
+        "",
+        "## ① 旅色本体掲載ページ",
+    ]
+
+    _summary_add_kv(lines, "掲載ページ", [
+        ("日本語LP", config.get("lp_url")),
+        ("電子雑誌URL", derived.get("magazine_url")),
+        ("電子雑誌スクショ取得", derived.get("has_magazine")),
+        ("エリアガイド", derived.get("area_name")),
+    ])
+    _summary_add_items(lines, "スーパーテーマ特集", config.get("super_themes", []))
+    _summary_add_items(lines, "テーマ特集", config.get("normal_themes", []))
+    _summary_add_items(lines, "ジャンルランキング", config.get("genre_rankings", []))
+
+    lines.append("## ② Instagram投稿確認")
+    _summary_add_kv(lines, "SNS判定", [
+        ("Instagram実績", config.get("has_instagram")),
+        ("Facebook実績", config.get("has_facebook")),
+        ("SNS実績", config.get("has_sns")),
+    ])
+    sns_records = (
+        config.get("instagram_records")
+        or config.get("instagram_history")
+        or config.get("sns_records")
+        or config.get("sns_matches")
+        or []
+    )
+    _summary_add_items(lines, "投稿履歴", sns_records, "確認できる範囲では該当投稿なし")
+
+    lines.append("## ③ 海外版旅色・旅色プラス")
+    _summary_add_kv(lines, "海外版LP", [
+        ("台湾版LP", config.get("tw_lp_url")),
+        ("英語版LP", config.get("en_lp_url")),
+    ])
+    plus_records = config.get("tabiiroplus_articles") or config.get("plus_articles") or config.get("tabiiro_plus") or []
+    _summary_add_items(lines, "旅色プラス", plus_records)
+
+    lines.append("## ④ ランクイン履歴")
+    ranking_history = (
+        config.get("ranking_history")
+        or config.get("ranking_records")
+        or config.get("rank_history")
+        or config.get("ranking_history_records")
+        or []
+    )
+    _summary_add_items(lines, "Excel・履歴データ", ranking_history)
+
+    lines.append("## ⑤ 記事数値・掲載旅行プラン")
+    _summary_add_items(lines, "SEO記事・Google上位キーワード", config.get("seo_articles", []))
+    article_metrics = config.get("article_metrics") or config.get("article_metric_records") or []
+    _summary_add_items(lines, "記事数値", article_metrics)
+    travel_plans = config.get("travel_plans") or config.get("plans") or []
+    _summary_add_items(lines, "掲載旅行プラン", travel_plans)
+
+    lines.append("## 公式HP・女優バナー")
+    _summary_add_kv(lines, "公式HP判定", [
+        ("公式HP URL", derived.get("official_hp_url") or config.get("official_hp_url") or config.get("official_hp")),
+        ("ブランジスタ制作HP", derived.get("is_brangista_hp")),
+        ("旅色女優バナー", derived.get("has_actress_banner")),
+    ])
+
+    lines.append("## 表示回数・ROI")
+    roi_sim = config.get("roi_sim", {})
+    _summary_add_kv(lines, "ROI設定", [
+        ("月間表示回数", roi_sim.get("monthly_views")),
+        ("客単価", roi_sim.get("unit_price")),
+        ("人数", roi_sim.get("number_of_people")),
+        ("来店率", roi_sim.get("visit_rate")),
+        ("投資額", roi_sim.get("investment_cost")),
+    ])
+    monthly_table = config.get("monthly_views_table", {})
+    _summary_add_kv(lines, "月別表示回数表", [
+        ("ヘッダー", monthly_table.get("headers")),
+        ("表示回数", monthly_table.get("views")),
+    ])
+
+    notes = config.get("notes") or config.get("sales_notes") or config.get("warnings")
+    if notes:
+        lines.append("## 営業時の使いどころ / 注意点")
+        if isinstance(notes, list):
+            for note in notes:
+                lines.append(f"- {_summary_value(note)}")
+        else:
+            lines.append(f"- {_summary_value(notes)}")
+        lines.append("")
+
+    with open(summary_output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines).rstrip() + "\n")
+    return summary_output_path
+
 # Image scraping & fallbacks
 def download_og_image(url, save_path):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -733,7 +912,7 @@ def capture_lp_ratio(url, output_dir, folder_name, ratio_top=12.32/9.33, ratio_b
         return True
 
 # Presentation core compiler
-def compile_presentation(config, template_pptx_path, output_pptx_path):
+def compile_presentation(config, template_pptx_path, output_pptx_path, summary_output_path=None):
     shop_id = str(config["shop_id"])
     shop_name = config["shop_name"]
     prefecture = config["prefecture"]
@@ -1319,6 +1498,21 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
     pres.Close()
     try: ppt.Quit()
     except Exception: pass
+
+    summary_path = generate_research_summary(
+        config,
+        output_pptx_path,
+        summary_output_path=summary_output_path,
+        derived={
+            "official_hp_url": official_hp_url,
+            "is_brangista_hp": is_brangista_hp,
+            "has_actress_banner": has_actress_banner,
+            "magazine_url": magazine_url,
+            "has_magazine": has_magazine,
+            "area_name": area_name,
+        },
+    )
+    print(f"Research summary generated: {summary_path}")
     
     try: os.remove(local_temp_path)
     except: pass
@@ -1330,6 +1524,7 @@ def main():
     parser.add_argument("--config", help="Path to JSON configuration file", required=True)
     parser.add_argument("--template", help="Path to template PPTX file (optional, defaults to local templates folder)")
     parser.add_argument("--output", help="Path to write output PPTX file", required=True)
+    parser.add_argument("--summary-output", help="Path to write the research summary Markdown file (optional)")
     args = parser.parse_args()
     
     with open(args.config, 'r', encoding='utf-8') as f:
@@ -1348,7 +1543,8 @@ def main():
     print(f"  Template: {template_path}")
     print(f"  Output: {output_path}")
     
-    compile_presentation(config, template_path, output_path)
+    summary_output_path = os.path.abspath(args.summary_output) if args.summary_output else None
+    compile_presentation(config, template_path, output_path, summary_output_path=summary_output_path)
 
 if __name__ == "__main__":
     main()

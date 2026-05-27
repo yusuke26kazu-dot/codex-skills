@@ -191,6 +191,8 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
 
 精査した結果は、以下のセクションに沿って出力します。データに基づかない過大な主張は避け、客観的な事実（URLやExcelファイル名）を明記してください。
 
+PowerPoint提案書を生成する場合も、PPTXだけで終わらせず、同じ精査結果を人が読めるMarkdownの**精査まとめ**として必ず同時出力します。既定ではPPTXと同じフォルダに `[PPTXファイル名]_精査まとめ.md` を作成し、必要に応じて `--summary-output` で保存先を指定します。
+
 ```text
 ① 旅色本体掲載ページ
 ② Instagram投稿確認
@@ -291,7 +293,7 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
 * `scripts/search_xlsx.py`: 指定されたExcelファイルの全セルから店舗名やIDを検索するスクリプト（事前調査で使用）。
 * `scripts/instagram_history.py`: 旅色SNS営業支援投稿のExcelファイルからInstagramの投稿履歴を検索・抽出するスクリプト（事前調査で使用）。
 * `scripts/article_metrics.py`: 記事数値管理シートから指定記事スラグの最新3ヶ月合計PV数やGoogle10位以内のキーワードを自動算出するスクリプト（事前調査で使用）。
-* `scripts/update_presentation_generic.py`: **任意の店舗の事前調査結果（以下のJSON形式など）に基づいて、上記のPowerPoint作成ルールを完全に自動適用する汎用提案書作成スクリプト**。
+* `scripts/update_presentation_generic.py`: **任意の店舗の事前調査結果（以下のJSON形式など）に基づいて、上記のPowerPoint作成ルールを完全に自動適用し、同時に精査まとめMarkdownも出力する汎用提案書作成スクリプト**。
 
 ### 💡 汎用提案書作成スクリプト用 JSON Config 仕様例
 スクリプトを実行する際は、事前精査で得られたデータを以下のフォーマット（JSONファイル）で記述し、引数 `--config` として渡すことで動的にスライドが構築されます。
@@ -362,6 +364,7 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
     ```bash
     python scripts/update_presentation_generic.py --config examples/epice_config.json --output output/提案書.pptx
     ```
+    ※省略時は `output/提案書_精査まとめ.md` も同時生成します。保存先を明示する場合は `--summary-output output/精査まとめ.md` を追加します。
   * **プロジェクトルートから実行する場合**:
     ```bash
     python tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/scripts/update_presentation_generic.py --config tabiiro-renewal-research-skill/tabiiro-renewal-research-skill/examples/epice_config.json --output output/提案書.pptx
