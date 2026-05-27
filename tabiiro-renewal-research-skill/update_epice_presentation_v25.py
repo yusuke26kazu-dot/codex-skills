@@ -555,7 +555,7 @@ def process_presentation():
     counts = capture_theme_ranking_screenshots(rank_screenshots_params, "epice", img_dir)
     
     # Open presentation
-    template_path = os.path.abspath(r"C:\Users\NX023066\Desktop\更新\案件ごと\施設報告資料\施設専用資料テンプレ（TG）260316.pptx")
+    template_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "施設専用資料テンプレ（TG）260316.pptx"))
     local_temp_path = os.path.abspath("temp_presentation_v25.pptx")
     
     print(f"Copying template from {template_path} to local temp {local_temp_path}")

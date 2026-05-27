@@ -13,3 +13,6 @@ test_images/
 *.gif
 *.log
 *.txt
+
+# Exceptions to allow templates in git
+!**/templates/*.pptx
