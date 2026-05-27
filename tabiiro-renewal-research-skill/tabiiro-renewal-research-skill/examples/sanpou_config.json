@@ -1,0 +1,61 @@
+{
+  "shop_id": "313244",
+  "shop_name": "三方商店",
+  "prefecture": "滋賀県",
+  "address": "滋賀県大津市",
+  "selected_plan": "TO4",
+  "lp_url": "https://tabiiro.jp/otoriyose/s/313244-otsu-sanpou-shouten/",
+  "official_hp_url": "https://sanpou-shouten.jp/",
+  "super_themes": [
+    {
+      "name": "お中元・夏ギフトにおすすめ",
+      "url": "https://tabiiro.jp/otoriyose/theme/ochugen/",
+      "rank": "掲載あり",
+      "slug": "ochugen"
+    }
+  ],
+  "normal_themes": [
+    {
+      "name": "この夏はおうちで盛り上がろう！スポーツ観戦グルメ",
+      "url": "https://tabiiro.jp/otoriyose/theme/sports_kansen/",
+      "rank": "掲載あり",
+      "slug": "sports_kansen"
+    }
+  ],
+  "seo_articles": [],
+  "genre_rankings": [
+    {
+      "name": "ロゼワイン",
+      "url": "https://tabiiro.jp/otoriyose/ranking/alcohol/wine/rose/",
+      "rank": "5位",
+      "list_count": 10,
+      "code_idx": 0
+    },
+    {
+      "name": "ピザ",
+      "url": "https://tabiiro.jp/otoriyose/ranking/delicatessen/pizza/",
+      "rank": "10位",
+      "list_count": 20,
+      "code_idx": 1
+    }
+  ],
+  "has_sns": false,
+  "has_instagram": false,
+  "has_facebook": false,
+  "roi_sim": {
+    "monthly_views": 1500,
+    "unit_price": 9000,
+    "number_of_people": 1,
+    "visit_rate": 0.005,
+    "investment_cost": 20000
+  },
+  "monthly_views_table": {
+    "headers": ["月", "11月", "12月", "1月", "2月", "3月", "4月", "合計", "平均"],
+    "views": ["表示回数", "1,550", "1,420", "1,380", "1,490", "1,520", "1,640", "9,000", "1,500"]
+  },
+  "sales_notes": [
+    "お取り寄せLP（店舗ID: 313244）は現在も完全アクティブ（200 OK）で生存中。以前の404非公開判定はグルメID（307137）の誤認によるものです。",
+    "ロゼワイン部門で全国第5位、ピザ部門で全国第10位と、主力商品の双方で極めて優秀な全国トップクラスのランキング実績を獲得中。",
+    "公式ホームページ（http://sanpou-shouten.jp/）に、かつて制作された旅色お取り寄せの女優タイアップバナー（電子雑誌313244枠）が現在も継続して掲載されており、旅色掲載への信頼度が非常に高い状態。"
+  ]
+}

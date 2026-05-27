@@ -354,7 +354,7 @@ def download_fv_image(url, save_path):
         pass
     return False
 
-def download_super_theme_slider_images(super_themes_data, img_dir):
+def download_super_theme_slider_images(super_themes_data, img_dir, selected_plan=None):
     """Download designed slider images for Super Themes from gourmet theme list page."""
     url = "https://tabiiro.jp/gourmet/theme/"
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -408,11 +408,13 @@ def download_super_theme_slider_images(super_themes_data, img_dir):
             print(f"Falling back to OG image download for {slug}")
             download_og_image(t_url, path)
             
-        # Crop to Aspect Ratio 20.11 x 12.58
+        # Crop to Aspect Ratio (TO: 11.49 / 18.35, TG: 12.58 / 20.11)
         if os.path.exists(path):
             try:
                 img = Image.open(path)
-                target_h = int(img.width * (12.58 / 20.11))
+                is_to = selected_plan and "TO" in selected_plan
+                ratio = (11.49 / 18.35) if is_to else (12.58 / 20.11)
+                target_h = int(img.width * ratio)
                 if target_h < img.height:
                     top = (img.height - target_h) / 2
                     bottom = top + target_h
@@ -789,6 +791,33 @@ def capture_electronic_magazine(magazine_url, shop_id, output_dir):
             page.goto(magazine_url, wait_until='networkidle', timeout=20000)
             page.wait_for_timeout(3000)
             
+            # Detect if the shop element is on the left page or right page before clicking
+            detail_selectors = [
+                f"#ID{shop_id} .item_list a",
+                f"#ID{shop_id}_inner .btn_detail a",
+                f"#ID{shop_id} .btn_detail a",
+            ]
+            
+            elem_selector = None
+            for selector in detail_selectors:
+                elem = page.locator(selector).first
+                if elem.count() > 0:
+                    elem_selector = selector
+                    break
+            
+            is_left_page = False
+            if elem_selector:
+                elem = page.locator(elem_selector).first
+                box = elem.bounding_box()
+                if box:
+                    x_center = box['x'] + box['width'] / 2
+                    print(f"Shop element found at x={box['x']}, width={box['width']}. Center={x_center}")
+                    if x_center < 600:
+                        is_left_page = True
+                        print("Shop is on the LEFT page.")
+                    else:
+                        print("Shop is on the RIGHT page.")
+            
             # 1. Capture Before popup
             contents_elem = page.locator("#contents").first
             if contents_elem.count() > 0:
@@ -797,7 +826,10 @@ def capture_electronic_magazine(magazine_url, shop_id, output_dir):
                 
                 img = Image.open(temp_contents_path)
                 w, h = img.size
-                cropped = img.crop((w // 2, 0, w, h))
+                if is_left_page:
+                    cropped = img.crop((0, 0, w // 2, h))
+                else:
+                    cropped = img.crop((w // 2, 0, w, h))
                 cropped.save(os.path.join(output_dir, "magazine_before.png"))
                 
                 try: os.remove(temp_contents_path)
@@ -806,17 +838,16 @@ def capture_electronic_magazine(magazine_url, shop_id, output_dir):
                 full_before_path = os.path.join(output_dir, "magazine_full_before.png")
                 page.screenshot(path=full_before_path)
                 img = Image.open(full_before_path)
-                cropped = img.crop((1200 - 570, 0, 1200, 800))
+                w, h = img.size
+                if is_left_page:
+                    cropped = img.crop((0, 0, 570, 800))
+                else:
+                    cropped = img.crop((1200 - 570, 0, 1200, 800))
                 cropped.save(os.path.join(output_dir, "magazine_before.png"))
                 try: os.remove(full_before_path)
                 except Exception: pass
             
             # 2. Click shop detail; Tabiiro book layouts vary by template generation.
-            detail_selectors = [
-                f"#ID{shop_id} .item_list a",
-                f"#ID{shop_id}_inner .btn_detail a",
-                f"#ID{shop_id} .btn_detail a",
-            ]
             for popup_selector in detail_selectors:
                 detail_btn = page.locator(popup_selector).first
                 if detail_btn.count() > 0:
@@ -881,9 +912,22 @@ def capture_lp_ratio(url, output_dir, folder_name, ratio_top=12.32/9.33, ratio_b
         img = Image.open(full_path)
         
         # --- ① Top Crop ---
-        lead_content = page.locator("#lead .content").first
-        if lead_content.count() > 0:
-            bbox1 = lead_content.bounding_box()
+        top_elem = None
+        top_candidates = [
+            ".shopdata--wire.top",
+            ".shopdata--wire",
+            "#lead .content",
+            "#lead"
+        ]
+        for sel in top_candidates:
+            loc = page.locator(sel).first
+            if loc.count() > 0:
+                top_elem = loc
+                print(f"  Selected '{sel}' as top crop anchor.")
+                break
+                
+        if top_elem:
+            bbox1 = top_elem.bounding_box()
             x1 = int(bbox1['x'])
             y1 = int(bbox1['y'])
             x2 = int(bbox1['x'] + bbox1['width'])
@@ -902,6 +946,12 @@ def capture_lp_ratio(url, output_dir, folder_name, ratio_top=12.32/9.33, ratio_b
             if custom_elem.count() > 0:
                 start_elem = custom_elem
         
+        if not start_elem:
+            product_header = page.locator("h2:has-text('このショップの取扱い商品一覧')").first
+            if product_header.count() > 0:
+                start_elem = product_header
+                print("  Selected 'このショップの取扱い商品一覧' heading as bottom crop anchor.")
+                
         if not start_elem:
             topics = page.locator(".topics").first
             recommend = page.locator("#recommend").first
@@ -978,7 +1028,10 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
     # 2. Capture LPs
     print("Capturing LPs...")
     if lp_url:
-        capture_lp_ratio(lp_url, img_dir, "lp", ratio_top=12.32/9.33, ratio_bottom=12.32/9.33)
+        if selected_plan and "TO" in selected_plan:
+            capture_lp_ratio(lp_url, img_dir, "lp", ratio_top=6.42/11.34, ratio_bottom=7.45/11.3)
+        else:
+            capture_lp_ratio(lp_url, img_dir, "lp", ratio_top=12.32/9.33, ratio_bottom=12.32/9.33)
     if tw_lp_url:
         capture_lp_ratio(tw_lp_url, img_dir, "lp_tw", ratio_top=12.26/9.29, ratio_bottom=10.46/14.43, bottom_selector=".topics")
     if en_lp_url:
@@ -1009,7 +1062,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
         
     # 4. Download & crop visual cards
     print("Processing visual themes and SEO articles...")
-    download_super_theme_slider_images(super_themes_data, img_dir)
+    download_super_theme_slider_images(super_themes_data, img_dir, selected_plan)
     
     for i, item in enumerate(normal_themes_data):
         url = item["url"]
@@ -1017,7 +1070,9 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
         if download_og_image(url, path):
             try:
                 img = Image.open(path)
-                target_h = int(img.width * (10.77 / 19.15))
+                is_to = selected_plan and "TO" in selected_plan
+                ratio = (11.49 / 18.35) if is_to else (10.77 / 19.15)
+                target_h = int(img.width * ratio)
                 if target_h < img.height:
                     top = (img.height - target_h) / 2
                     bottom = top + target_h
@@ -1058,6 +1113,8 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
     theme_base_idx = find_slide_index_by_text(pres, "テーマ特集", exclude_text="スーパーテーマ特集")
     seo_base_idx = find_slide_index_by_text(pres, "Google検索にて", exclude_text="素材")
     genre_base_idx = find_slide_index_by_text(pres, "ランクイン報告（ジャンル別）")
+    if genre_base_idx == -1:
+        genre_base_idx = find_slide_index_by_text(pres, "ランクイン報告（カテゴリ別）")
     
     print(f"Base slide indices: Super={super_theme_base_idx}, Theme={theme_base_idx}, SEO={seo_base_idx}, Genre={genre_base_idx}")
     
@@ -1078,7 +1135,10 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
             new_slide = super_theme_base_slide.Duplicate().Item(1)
             img_path = os.path.join(img_dir, f"st_{i}.jpg")
             if os.path.exists(img_path):
-                replace_picture_on_slide(new_slide, img_path, left_cm=4.82, top_cm=4.35, width_cm=20.11, height_cm=12.58)
+                if selected_plan and "TO" in selected_plan:
+                    replace_picture_on_slide(new_slide, img_path, left_cm=5.67, top_cm=4.75, width_cm=18.35, height_cm=11.49)
+                else:
+                    replace_picture_on_slide(new_slide, img_path, left_cm=4.82, top_cm=4.35, width_cm=20.11, height_cm=12.58)
         super_theme_base_slide.Delete()
         
     # C. Regular Theme Slides (③)
@@ -1088,7 +1148,10 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
             new_slide = theme_base_slide.Duplicate().Item(1)
             img_path = os.path.join(img_dir, f"nt_{i}.jpg")
             if os.path.exists(img_path):
-                replace_picture_on_slide(new_slide, img_path, left_cm=5.28, top_cm=5.45, width_cm=19.15, height_cm=10.77)
+                if selected_plan and "TO" in selected_plan:
+                    replace_picture_on_slide(new_slide, img_path, left_cm=5.67, top_cm=4.75, width_cm=18.35, height_cm=11.49)
+                else:
+                    replace_picture_on_slide(new_slide, img_path, left_cm=5.28, top_cm=5.45, width_cm=19.15, height_cm=10.77)
                 
             # Relocate bottom textbox
             for shape in new_slide.Shapes:
@@ -1357,17 +1420,32 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
             top_path = os.path.join(img_dir, "lp", "lp_top.png")
             bottom_path = os.path.join(img_dir, "lp", "lp_bottom.png")
             if os.path.exists(top_path) and os.path.exists(bottom_path):
-                pic1 = slide.Shapes.AddPicture(top_path, False, True, 0, 0, -1, -1)
-                pic1.LockAspectRatio = -1
-                pic1.Width = 9.33 * 28.346
-                pic1.Left = 5.18 * 28.346
-                pic1.Top = 4.9 * 28.346
-                
-                pic2 = slide.Shapes.AddPicture(bottom_path, False, True, 0, 0, -1, -1)
-                pic2.LockAspectRatio = -1
-                pic2.Width = 9.33 * 28.346
-                pic2.Left = 15.23 * 28.346
-                pic2.Top = 4.96 * 28.346
+                if selected_plan and "TO" in selected_plan:
+                    pic1 = slide.Shapes.AddPicture(top_path, False, True, 0, 0, -1, -1)
+                    pic1.LockAspectRatio = 0
+                    pic1.Width = 11.34 * 28.346
+                    pic1.Height = 6.42 * 28.346
+                    pic1.Left = 9.2 * 28.346
+                    pic1.Top = 4.26 * 28.346
+                    
+                    pic2 = slide.Shapes.AddPicture(bottom_path, False, True, 0, 0, -1, -1)
+                    pic2.LockAspectRatio = 0
+                    pic2.Width = 11.3 * 28.346
+                    pic2.Height = 7.45 * 28.346
+                    pic2.Left = 9.25 * 28.346
+                    pic2.Top = 10.67 * 28.346
+                else:
+                    pic1 = slide.Shapes.AddPicture(top_path, False, True, 0, 0, -1, -1)
+                    pic1.LockAspectRatio = -1
+                    pic1.Width = 9.33 * 28.346
+                    pic1.Left = 5.18 * 28.346
+                    pic1.Top = 4.9 * 28.346
+                    
+                    pic2 = slide.Shapes.AddPicture(bottom_path, False, True, 0, 0, -1, -1)
+                    pic2.LockAspectRatio = -1
+                    pic2.Width = 9.33 * 28.346
+                    pic2.Left = 15.23 * 28.346
+                    pic2.Top = 4.96 * 28.346
 
         # Update official HP slide only when the official HP is Brangista-produced.
         if "御社公式ホームページ" in text_content:
