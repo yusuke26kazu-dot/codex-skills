@@ -558,6 +558,34 @@ def get_area_guide_name(prefecture, address=""):
         return "兵庫"
     return pref
 
+def get_to_area_name(pref):
+    if not pref:
+        return "近畿"
+    pref = pref.strip()
+    if "北海道" in pref:
+        return "北海道"
+    elif any(p in pref for p in ["青森", "岩手", "宮城", "秋田", "山形", "福島"]):
+        return "東北"
+    elif any(p in pref for p in ["茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川"]):
+        return "関東"
+    elif any(p in pref for p in ["新潟", "山梨", "長野"]):
+        return "甲信越"
+    elif any(p in pref for p in ["富山", "石川", "福井"]):
+        return "北陸"
+    elif any(p in pref for p in ["岐阜", "静岡", "愛知", "三重"]):
+        return "東海"
+    elif any(p in pref for p in ["滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山"]):
+        return "近畿"
+    elif any(p in pref for p in ["鳥取", "島根", "岡山", "広島", "山口"]):
+        return "山陰・山陽"
+    elif any(p in pref for p in ["徳島", "香川", "愛媛", "高知"]):
+        return "四国"
+    elif any(p in pref for p in ["福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島"]):
+        return "九州"
+    elif "沖縄" in pref:
+        return "沖縄"
+    return "近畿"
+
 def get_official_hp_url(gourmet_url):
     from bs4 import BeautifulSoup
     ignored_domains = [
@@ -938,9 +966,11 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
     # 1. Fetch magazine pop-up
     has_magazine = False
     magazine_url = get_magazine_url(lp_url) if lp_url else None
+    if selected_plan.startswith("TO") and not magazine_url:
+        magazine_url = f"https://tabiiro.jp/book/indivi/otoriyose/{shop_id}/"
     area_name = get_area_guide_name(prefecture, address)
     
-    if selected_plan in ["TG4", "TG5"] and magazine_url:
+    if selected_plan in ["TG4", "TG5", "TO1", "TO2", "TO3", "TO4", "TO5"] and magazine_url:
         print(f"Found electronic magazine: {magazine_url}")
         if capture_electronic_magazine(magazine_url, shop_id, img_dir):
             has_magazine = True
@@ -1143,16 +1173,33 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
         
     # F. Slide Cleanup Loop
     print("Running cleanup loop for non- printable or mismatched plan slides...")
-    irrelevant_keywords = [
-        "都道府県別", "●●県", "○○県", "旅行プランの中で", "旅行プラン",
-        "旅色プラス", "Instagram", "インスタ投稿", "Facebook"
-    ]
-    
-    # Remove config-specified SNS slides if active
+    # Check what features are active dynamically
     has_sns = config.get("has_sns", False)
     has_instagram = config.get("has_instagram", False)
     has_facebook = config.get("has_facebook", False)
     
+    plus_articles = config.get("tabiiroplus_articles") or config.get("plus_articles") or config.get("tabiiro_plus") or []
+    has_plus = len(plus_articles) > 0 or config.get("has_plus", False)
+    
+    tw_lp = config.get("tw_lp_url")
+    en_lp = config.get("en_lp_url")
+    has_overseas = bool(tw_lp or en_lp or config.get("has_overseas", False))
+    
+    has_monitor = config.get("has_monitor", False)
+    has_line_campaign = config.get("has_line_campaign", False)
+    has_award = config.get("has_award", False)
+    has_staff_recommend = config.get("has_staff_recommend", False)
+    has_photography = config.get("has_photography", False)
+    has_pr_frame = config.get("has_pr_frame", False)
+
+    irrelevant_keywords = ["都道府県別", "●●県", "○○県", "旅行プランの中で", "旅行プラン"]
+    if not has_instagram:
+        irrelevant_keywords.extend(["Instagram", "インスタ投稿"])
+    if not has_facebook:
+        irrelevant_keywords.append("Facebook")
+    if not has_plus:
+        irrelevant_keywords.append("旅色プラス")
+
     for idx in range(pres.Slides.Count, 0, -1):
         slide = pres.Slides(idx)
         
@@ -1204,8 +1251,38 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
                 slide.Delete()
                 continue
                 
+        # Delete TO-specific slides if unused
+        if "モニターレポート" in text_content or "モニター施策" in text_content:
+            if not has_monitor:
+                slide.Delete()
+                continue
+        if "LINEプレゼント" in text_content or "LINEキャンペーン" in text_content:
+            if not has_line_campaign:
+                slide.Delete()
+                continue
+        if "AWARD" in text_content or "受賞" in text_content:
+            if not has_award:
+                slide.Delete()
+                continue
+        if "イチオシ" in text_content or "いち推し" in text_content:
+            if not has_staff_recommend:
+                slide.Delete()
+                continue
+        if "撮影" in text_content or "無料商品撮影" in text_content or "撮影した画像" in text_content or "撮影画像" in text_content or "撮影写真" in text_content:
+            if not has_photography:
+                slide.Delete()
+                continue
+        if "スーパーテーマ特集PR枠" in text_content or "PR枠" in text_content or "PR広告枠" in text_content or "PR広告" in text_content:
+            if not has_pr_frame:
+                slide.Delete()
+                continue
+        if "海外版" in text_content or "繁体字" in text_content or "英語版" in text_content:
+            if not has_overseas:
+                slide.Delete()
+                continue
+                
         # Handle magazine plans
-        matched_magazines = [plan for plan in ["TG2", "TG3", "TG4", "TG5"] if plan in text_content]
+        matched_magazines = [plan for plan in ["TG2", "TG3", "TG4", "TG5", "TO1", "TO2", "TO3", "TO4", "TO5"] if plan in text_content]
         if matched_magazines:
             if selected_plan and not any(p == selected_plan for p in matched_magazines):
                 slide.Delete()
@@ -1213,6 +1290,11 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
                 
             if selected_plan in matched_magazines and has_magazine:
                 replace_text_in_shapes(slide.Shapes, "○○エリアガイド", f"{area_name}エリアガイド")
+                
+                # TO Area replacement
+                to_area = get_to_area_name(prefecture)
+                replace_text_in_shapes(slide.Shapes, "○○エリア", f"{to_area}")
+                replace_text_in_shapes(slide.Shapes, "〇〇エリア", f"{to_area}")
                 
                 # Delete placeholders
                 for shape in list(slide.Shapes):
@@ -1227,7 +1309,18 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
                 before_path = os.path.join(img_dir, "magazine_before.png")
                 after_path = os.path.join(img_dir, "magazine_after.png")
                 after_overlay_path = os.path.join(img_dir, "magazine_after_overlay.png")
-                if selected_plan == "TG4":
+                
+                # TO to TG layout mapping
+                plan_mapping = {
+                    "TO1": "TG2",
+                    "TO2": "TG3",
+                    "TO3": "TG3",
+                    "TO4": "TG4",
+                    "TO5": "TG5"
+                }
+                layout_plan = plan_mapping.get(selected_plan, selected_plan)
+                
+                if layout_plan == "TG4":
                     if os.path.exists(before_path):
                         pic_before = slide.Shapes.AddPicture(before_path, False, True, 0, 0, -1, -1)
                         pic_before.LockAspectRatio = -1
