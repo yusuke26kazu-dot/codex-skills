@@ -66,6 +66,8 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
 * **内容**: 旅色のタイアップ女優バナーが公式HPに設置されているかを判定します。
 * **手順**: 
   * 公式HP（旅色制作HP、またはクライアント自身の独自サイト）の中に、旅色の「女優バナー（タイアップバナー）」が実際に設置されているかを精査します。
+  * 公式HP上で `img[src*="tabiiro"]` または `a[href*="tabiiro.jp"]` 内の画像を探し、該当画像が表示されている場合は女優バナー実績として扱います。
+  * バナーが見つかった場合は、バナー単体ではなく、公式HP上で実際に設置されている周辺領域をスクリーンショット化します。
 
 ### ⑦ SNS（Instagram）投稿履歴調査
 * **内容**: 旅色公式Instagramでの過去の紹介実績を判定します。
@@ -243,6 +245,14 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
   * **台湾版・英語版LP**: 
     * 全体のスクショから上部を `12.26 / 9.29`、下部（`.topics` 起点）を `10.46 / 14.43` の比率で切り出します。
     * **配置座標**: Top側を **`Left: 3.23 cm, Top: 4.67 cm, Width: 9.29 cm`**、Bottom側を **`Left: 13.17 cm, Top: 5.61 cm, Width: 14.43 cm`** に配置します。
+* **御社公式ホームページ — ※スクショを貼り付け**
+  * 公式HPがブランジスタ制作HP（旅色HP）と判定できた場合のみスライドを残します。
+  * HP上部スクショを **`Left: 3.61 cm, Top: 5.22 cm, Width: 10.87 cm`**、HP下部スクショを **`Left: 15.21 cm, Top: 5.22 cm, Width: 11.49 cm`** に貼り付けます。
+  * ブランジスタ制作HPでない場合、またはスクショ取得に失敗した場合は、該当スライドを削除します。
+* **旅色女優バナー — ※スクショを貼り付け**
+  * 公式HPから `img[src*="tabiiro"]` または `a[href*="tabiiro.jp"]` 内の画像を探します。
+  * 見つけたバナー周辺をスクリーンショット化し、バナースライドに **`Left: 4.8 cm, Top: 5.21 cm, Width: 20.09 cm`** で貼り付けます。
+  * バナーが確認できない場合は、該当スライドを削除します。
 * **スライド19 (旅色表示回数/ROI計算機) — ※スクショと表を新規生成**
   * **上部 (ROIシミュレーター)**: 実績データ（表示回数、客単価、投資額）を自動入力して実行した計算結果の画面キャプチャを、座標 **`Left: 2.94 cm, Top: 5.01 cm, Width: 23.83 cm, Height: 10.5 cm`** に配置します。
   * **下部 (月別PV実績表)**: 渡された表示回数データが12ヶ月以上ある場合は最新12ヶ月分を掲載します。12ヶ月未満の場合は渡された月数に合わせて列数を調整します。月またぎ期間（例: `07/25 - 08/24`）は終了月で表記し、年も正しく補完して **`2025年8月`** のように表示します。PowerPointネイティブな表を、座標 **`Left: 3.09 cm, Top: 16.63 cm, Width: 23.53 cm, Height: 2.11 cm`** に新規生成して流し込みます。フォントは「游ゴシック」を基本にし、列数が多い場合は8pt前後まで下げて文字切れを避けます。ヘッダー背景をRGB(232, 162, 162)のピンク、合計列をライトグレーで自動着色します。
@@ -252,6 +262,8 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
 * **スクリーンショットを貼るスライド (画面エビデンスを提示する場所)**
   * 各種ランディングページ（日本語・台湾・英語LP）
   * 電子雑誌のポップアップ掲載スライド
+  * 御社公式ホームページ（ブランジスタ制作HPの場合）
+  * 旅色女優バナー（公式HP上で確認できる場合）
   * ジャンルランキングの順位一覧（サイドバー）および自社詳細カード
   * ROI計算機の計算結果シミュレーション表示
 * **スクリーンショットを貼らないスライド (訴求ビジュアルを提示する場所)**
@@ -292,6 +304,7 @@ description: Perform Tabiiro/旅色 renewal-sales research and TG proposal deck 
   "address": "京都府京都市上京区...",
   "selected_plan": "TG5",
   "lp_url": "https://tabiiro.jp/gourmet/s/315399-kyoto-epice/",
+  "official_hp_url": "https://example.com/",
   "tw_lp_url": "https://tw.tabiiro.travel/gourmet/s/315399-kyoto-epice/",
   "en_lp_url": "https://en.tabiiro.travel/gourmet/s/315399-kyoto-epice/",
   "super_themes": [

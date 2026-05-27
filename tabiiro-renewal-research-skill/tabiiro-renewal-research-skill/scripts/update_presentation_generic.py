@@ -379,6 +379,198 @@ def get_area_guide_name(prefecture, address=""):
         return "兵庫"
     return pref
 
+def get_official_hp_url(gourmet_url):
+    from bs4 import BeautifulSoup
+    ignored_domains = [
+        'tabiiro.jp', 'twitter.com', 'facebook.com', 'instagram.com',
+        'google.com', 'line.me', 'youtube.com', 'tabelog.com',
+        'hotpepper.jp', 'retty.me', 'gnavi.co.jp', 'pinterest.com',
+        'tiktok.com', 'yahoo.co.jp', 'zendesk.com', 'brangista.com'
+    ]
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        req = urllib.request.Request(gourmet_url, headers=headers)
+        html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8')
+        soup = BeautifulSoup(html, 'html.parser')
+
+        table = soup.find('table', class_='shop-info__table')
+        if table:
+            for tr in table.find_all('tr'):
+                th = tr.find('th')
+                td = tr.find('td')
+                if th and td and 'ホームページ' in th.get_text():
+                    a = td.find('a', href=True)
+                    if a:
+                        return a['href']
+
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if href.startswith('http') and not any(domain in href.lower() for domain in ignored_domains):
+                return href
+    except Exception:
+        pass
+    return None
+
+def check_brangista_hp(url):
+    from bs4 import BeautifulSoup
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url, wait_until='domcontentloaded', timeout=15000)
+            html = page.content()
+            browser.close()
+
+        if 'tabiiro.jp' in html or 'brangista.com' in html:
+            return True
+
+        score = 0
+        soup = BeautifulSoup(html, 'html.parser')
+        footer = soup.find('footer')
+        if footer:
+            footer_text = footer.get_text()
+            if "プライバシーポリシー" in footer_text:
+                score += 10
+            if re.search(r'(Copyright|Ⓒ|©)\s*\d{4}', footer_text, re.IGNORECASE):
+                score += 10
+        if '旅色' in html:
+            score += 10
+        return score >= 30
+    except Exception:
+        return False
+
+def capture_official_hp_screenshots(url, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(viewport={'width': 1200, 'height': 8000})
+        page = context.new_page()
+        try:
+            try:
+                page.goto(url, wait_until='networkidle', timeout=15000)
+            except Exception:
+                page.goto(url, wait_until='load', timeout=15000)
+
+            page.wait_for_timeout(3000)
+            page.evaluate("""() => {
+                const style = document.createElement('style');
+                style.innerHTML = '* { transition: none !important; animation: none !important; }';
+                document.head.appendChild(style);
+                document.querySelectorAll('header, .header, footer, .footer, .fixed-elements').forEach(e => e.style.display='none');
+            }""")
+            page.wait_for_timeout(500)
+
+            top_h = int(1200 * (12.26 / 10.87))
+            page.set_viewport_size({'width': 1200, 'height': top_h})
+            page.screenshot(path=os.path.join(output_dir, "hp_top.png"))
+
+            selectors = ['#menu', '.recommendArea', '.recommend', '.concept', '.introduction',
+                         '.about', '#concept', '#about', '#recommend', '.menu', 'main']
+            full_path = os.path.join(output_dir, "full.png")
+            page.set_viewport_size({'width': 1200, 'height': 8000})
+            page.wait_for_timeout(500)
+            page.screenshot(path=full_path, full_page=True)
+            img = Image.open(full_path)
+
+            crop_box = None
+            for sel in selectors:
+                loc = page.locator(sel).first
+                if loc.count() == 0:
+                    continue
+                bbox = loc.bounding_box()
+                if not bbox or bbox['height'] < 100:
+                    continue
+                x1 = max(0, int(bbox['x']))
+                y1 = max(0, int(bbox['y']))
+                w = min(int(bbox['width']), img.width - x1)
+                h = int(w * (12.26 / 11.49))
+                if w > 200 and h > 200:
+                    if y1 + h > img.height:
+                        y1 = max(0, img.height - h)
+                    crop_box = (x1, y1, x1 + w, y1 + h)
+                    break
+
+            if not crop_box:
+                h = int(img.width * (12.26 / 11.49))
+                y1 = min(max(0, int(img.height * 0.35)), max(0, img.height - h))
+                crop_box = (0, y1, img.width, y1 + h)
+
+            img.crop(crop_box).save(os.path.join(output_dir, "hp_bottom.png"))
+            try: os.remove(full_path)
+            except Exception: pass
+            browser.close()
+            return True
+        except Exception as e:
+            print(f"Error capturing official HP screenshots: {e}")
+            browser.close()
+            return False
+
+def capture_actress_banner(url, output_path):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(viewport={'width': 1200, 'height': 8000})
+        page = context.new_page()
+        try:
+            try:
+                page.goto(url, wait_until='networkidle', timeout=15000)
+            except Exception:
+                page.goto(url, wait_until='load', timeout=15000)
+
+            page.wait_for_timeout(3000)
+            page.evaluate("""async () => {
+                const style = document.createElement('style');
+                style.innerHTML = '* { transition: none !important; animation: none !important; }';
+                document.head.appendChild(style);
+                for (let y = 0; y < document.body.scrollHeight; y += 800) {
+                    window.scrollTo(0, y);
+                    await new Promise(r => setTimeout(r, 80));
+                }
+                window.scrollTo(0, 0);
+            }""")
+            page.wait_for_timeout(500)
+
+            candidates = []
+            for locator in [
+                page.locator('img[src*="tabiiro"]'),
+                page.locator('a[href*="tabiiro.jp"] img')
+            ]:
+                for img_loc in locator.all():
+                    try:
+                        bbox = img_loc.bounding_box()
+                        if bbox and bbox['width'] > 20 and bbox['height'] > 20:
+                            candidates.append((bbox['width'] * bbox['height'], bbox))
+                    except Exception:
+                        pass
+
+            if not candidates:
+                browser.close()
+                return False
+
+            _, bbox = max(candidates, key=lambda item: item[0])
+            page_height = page.evaluate("document.body.scrollHeight")
+            target_w = 1200
+            target_h = int(target_w * (11.26 / 20.09))
+            center_y = bbox['y'] + bbox['height'] / 2
+            start_y = int(center_y - target_h / 2)
+            start_y = max(0, min(start_y, max(0, page_height - target_h)))
+
+            temp_full = output_path + ".full.png"
+            page.screenshot(path=temp_full, full_page=True)
+            img = Image.open(temp_full)
+            crop_w = min(target_w, img.width)
+            crop_h = min(target_h, img.height)
+            if start_y + crop_h > img.height:
+                start_y = max(0, img.height - crop_h)
+            img.crop((0, start_y, crop_w, start_y + crop_h)).save(output_path)
+            try: os.remove(temp_full)
+            except Exception: pass
+            browser.close()
+            return True
+        except Exception as e:
+            print(f"Error capturing actress banner: {e}")
+            browser.close()
+            return False
+
 def capture_electronic_magazine(magazine_url, shop_id, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     with sync_playwright() as p:
@@ -556,6 +748,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
     lp_url = config.get("lp_url")
     tw_lp_url = config.get("tw_lp_url")
     en_lp_url = config.get("en_lp_url")
+    official_hp_url = config.get("official_hp_url") or config.get("official_hp")
     
     img_dir = os.path.abspath("images")
     if os.path.exists(img_dir):
@@ -581,8 +774,31 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
         capture_lp_ratio(tw_lp_url, img_dir, "lp_tw", ratio_top=12.26/9.29, ratio_bottom=10.46/14.43, bottom_selector=".topics")
     if en_lp_url:
         capture_lp_ratio(en_lp_url, img_dir, "lp_en", ratio_top=12.26/9.29, ratio_bottom=10.46/14.43, bottom_selector=".topics")
+
+    # 3. Detect official HP, actress banner, and Brangista-produced HP evidence
+    print("Detecting official HP and actress banner...")
+    if not official_hp_url and lp_url:
+        official_hp_url = get_official_hp_url(lp_url)
+    is_brangista_hp = False
+    has_actress_banner = False
+    if official_hp_url:
+        print(f"  Official HP URL detected: {official_hp_url}")
+        is_brangista_hp = check_brangista_hp(official_hp_url)
+        print(f"  Is Brangista HP: {is_brangista_hp}")
+
+        banner_path = os.path.join(img_dir, "actress_banner.png")
+        if capture_actress_banner(official_hp_url, banner_path):
+            has_actress_banner = True
+            print("  Actress banner captured successfully.")
+
+        if is_brangista_hp:
+            hp_dir = os.path.join(img_dir, "official_hp")
+            if capture_official_hp_screenshots(official_hp_url, hp_dir):
+                print("  Official Brangista HP screenshots captured.")
+    else:
+        print("  No official HP URL found.")
         
-    # 3. Download & crop visual cards
+    # 4. Download & crop visual cards
     print("Processing visual themes and SEO articles...")
     download_super_theme_slider_images(super_themes_data, img_dir)
     
@@ -750,8 +966,7 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
     print("Running cleanup loop for non- printable or mismatched plan slides...")
     irrelevant_keywords = [
         "都道府県別", "●●県", "○○県", "旅行プランの中で", "旅行プラン",
-        "旅色プラス", "Instagram", "インスタ投稿", "Facebook",
-        "公式ホームページ", "御社公式ホームページ", "女優バナー", "旅色女優バナー"
+        "旅色プラス", "Instagram", "インスタ投稿", "Facebook"
     ]
     
     # Remove config-specified SNS slides if active
@@ -881,6 +1096,57 @@ def compile_presentation(config, template_pptx_path, output_pptx_path):
                 pic2.Width = 9.33 * 28.346
                 pic2.Left = 15.23 * 28.346
                 pic2.Top = 4.96 * 28.346
+
+        # Update official HP slide only when the official HP is Brangista-produced.
+        if "御社公式ホームページ" in text_content:
+            hp_top = os.path.join(img_dir, "official_hp", "hp_top.png")
+            hp_bottom = os.path.join(img_dir, "official_hp", "hp_bottom.png")
+            if not is_brangista_hp or not os.path.exists(hp_top) or not os.path.exists(hp_bottom):
+                slide.Delete()
+                continue
+
+            for shape in list(slide.Shapes):
+                try:
+                    if shape.HasTextFrame and shape.TextFrame.HasText:
+                        txt = shape.TextFrame.TextRange.Text
+                        if "スクショ" in txt or "コピペ" in txt:
+                            shape.Delete()
+                except Exception:
+                    pass
+
+            pic1 = slide.Shapes.AddPicture(hp_top, False, True, 0, 0, -1, -1)
+            pic1.LockAspectRatio = -1
+            pic1.Width = 10.87 * 28.346
+            pic1.Left = 3.61 * 28.346
+            pic1.Top = 5.22 * 28.346
+
+            pic2 = slide.Shapes.AddPicture(hp_bottom, False, True, 0, 0, -1, -1)
+            pic2.LockAspectRatio = -1
+            pic2.Width = 11.49 * 28.346
+            pic2.Left = 15.21 * 28.346
+            pic2.Top = 5.22 * 28.346
+
+        # Update Tabiiro actress banner slide only when the banner exists on the official HP.
+        if "女優バナー" in text_content or "旅色女優バナー" in text_content:
+            banner_path = os.path.join(img_dir, "actress_banner.png")
+            if not has_actress_banner or not os.path.exists(banner_path):
+                slide.Delete()
+                continue
+
+            for shape in list(slide.Shapes):
+                try:
+                    if shape.HasTextFrame and shape.TextFrame.HasText:
+                        txt = shape.TextFrame.TextRange.Text
+                        if "スクショ" in txt or "コピペ" in txt:
+                            shape.Delete()
+                except Exception:
+                    pass
+
+            pic = slide.Shapes.AddPicture(banner_path, False, True, 0, 0, -1, -1)
+            pic.LockAspectRatio = -1
+            pic.Width = 20.09 * 28.346
+            pic.Left = 4.8 * 28.346
+            pic.Top = 5.21 * 28.346
                 
         if "繁体字版旅色" in text_content:
             top_path = os.path.join(img_dir, "lp_tw", "lp_top.png")
