@@ -1,0 +1,113 @@
+{
+  "shop_id": "315399",
+  "shop_name": "epice エピス",
+  "prefecture": "京都府",
+  "address": "京都府京都市上京区寺町通今出川下ル真如堂前町105",
+  "selected_plan": "TG5",
+  "lp_url": "https://tabiiro.jp/gourmet/s/315399-kyoto-epice/",
+  "tw_lp_url": "https://tw.tabiiro.travel/gourmet/s/315399-kyoto-epice/",
+  "en_lp_url": "https://en.tabiiro.travel/gourmet/s/315399-kyoto-epice/",
+  "super_themes": [
+    {
+      "name": "高級店・高級レストラン",
+      "url": "https://tabiiro.jp/gourmet/theme/high-class-restaurant/ranking/kinki/kyoto/",
+      "rank": "1位",
+      "slug": "high-class-restaurant"
+    },
+    {
+      "name": "フレンチ",
+      "url": "https://tabiiro.jp/gourmet/theme/french/ranking/kinki/kyoto/",
+      "rank": "2位",
+      "slug": "french"
+    },
+    {
+      "name": "古民家レストラン・カフェ",
+      "url": "https://tabiiro.jp/gourmet/theme/kominka-cafe/ranking/kinki/kyoto/",
+      "rank": "4位",
+      "slug": "kominka-cafe"
+    },
+    {
+      "name": "ペット可・ペット同伴",
+      "url": "https://tabiiro.jp/gourmet/theme/pet_restaurant/ranking/kinki/kyoto/",
+      "rank": "1位",
+      "slug": "pet_restaurant"
+    },
+    {
+      "name": "クリスマスグルメ・クリスマスディナー",
+      "url": "https://tabiiro.jp/gourmet/theme/xmas_gourmet/ranking/kinki/kyoto/",
+      "rank": "4位",
+      "slug": "xmas_gourmet"
+    }
+  ],
+  "normal_themes": [
+    {
+      "name": "ワインがおいしいレストラン",
+      "url": "https://tabiiro.jp/theme/wine/",
+      "rank": "?",
+      "slug": "wine"
+    },
+    {
+      "name": "女子会におすすめのお店",
+      "url": "https://tabiiro.jp/theme/jyoshikai/",
+      "rank": "?",
+      "slug": "jyoshikai"
+    }
+  ],
+  "seo_articles": [
+    {
+      "keyword": "京都 ランチ おしゃれ",
+      "url": "https://tabiiro.jp/gourmet/article/kyoto-lunch-oshare/",
+      "rank": "1位",
+      "views": "8,389"
+    },
+    {
+      "keyword": "銅閣寺 周辺 グルメ",
+      "url": "https://tabiiro.jp/gourmet/article/ginkakuji-shuhen-gourmet/",
+      "rank": "6位",
+      "views": "1,308"
+    },
+    {
+      "keyword": "GW 京都 穴場 グルメ",
+      "url": "https://tabiiro.jp/gourmet/article/kyotoshinai-GW-anaba/",
+      "rank": "1位",
+      "views": "284"
+    }
+  ],
+  "genre_rankings": [
+    {
+      "name": "高級店",
+      "url": "https://tabiiro.jp/gourmet/theme/high-class-restaurant/ranking/kinki/kyoto/",
+      "rank": "1位",
+      "list_count": 20,
+      "code_idx": 0
+    },
+    {
+      "name": "古民家",
+      "url": "https://tabiiro.jp/gourmet/theme/kominka-cafe/ranking/kinki/kyoto/",
+      "rank": "4位",
+      "list_count": 11,
+      "code_idx": 1
+    },
+    {
+      "name": "クリスマス",
+      "url": "https://tabiiro.jp/gourmet/theme/xmas_gourmet/ranking/kinki/kyoto/",
+      "rank": "4位",
+      "list_count": 20,
+      "code_idx": 2
+    }
+  ],
+  "has_sns": false,
+  "has_instagram": false,
+  "has_facebook": false,
+  "roi_sim": {
+    "monthly_views": 4929,
+    "unit_price": 8000,
+    "number_of_people": 2,
+    "visit_rate": 0.1,
+    "investment_cost": 25000
+  },
+  "monthly_views_table": {
+    "headers": ["月", "10月", "11月", "12月", "1月", "2月", "3月", "4月", "合計", "平均"],
+    "views": ["表示回数", "4,958", "4,644", "3,682", "4,139", "4,615", "4,911", "7,557", "34,506", "4,929"]
+  }
+}
