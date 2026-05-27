@@ -18,7 +18,8 @@ description: Perform Tabiiro/旅色 renewal-sales research from a shop or facili
 ### ① 店舗アクティブ判定
 * **内容**: 旅色の日本語版グルメLP（ランディングページ）が現在も有効かを確認します。
 * **手順**: 
-  * グルメLPの想定URL（例: `https://tabiiro.jp/gourmet/s/[Gourmet_ID]-kyoto-[店舗名]/`）にアクセスし、生存しているかを確認します。
+  * グルメLPの想定URL（例: `https://tabiiro.jp/gourmet/s/[店舗ID]-[都道府県ローマ字]-[店舗スラグ]/`）にアクセスし、生存しているかを確認します。
+  * ※ `[都道府県ローマ字]` 部分には、店舗が所在する都道府県の小文字ローマ字表記（例：京都なら `kyoto`、大阪なら `osaka`、東京なら `tokyo`）が入ります。
   * **404エラー（ページ不在）の場合は「掲載終了店舗」として処理**します。
 
 ### ② スーパーテーマ特集（ランキング）調査
