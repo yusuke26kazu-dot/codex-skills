@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
@@ -145,6 +146,12 @@ def parse_date_text(value, fallback_year=2026) -> date:
 
 def load_plan_rows(path: Path):
     if path.suffix.lower() in {".xlsx", ".xlsm"}:
+        # If a cached CSV from a previous run exists, use it directly to avoid
+        # launching a second Excel instance (which can deadlock with restore_template_layout).
+        cached_csv = Path(tempfile.gettempdir()) / "tabiiro_plan_list_combined.csv"
+        if cached_csv.exists() and cached_csv.stat().st_size > 1000:
+            return load_plan_rows(cached_csv)
+
         wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
         try:
             # Some source workbooks expose only A1 through openpyxl despite opening normally in Excel.
@@ -176,12 +183,16 @@ function CsvEscape([string]$s) {{
   if($s -match '[,`r`n"]') {{ return '"' + $s + '"' }}
   return $s
 }}
+# Remove Zone.Identifier (Protected View block) from the file
+Unblock-File -LiteralPath '{str(path)}' -ErrorAction SilentlyContinue
 $excel = New-Object -ComObject Excel.Application
 $excel.Visible = $false
 $excel.DisplayAlerts = $false
+$excel.AskToUpdateLinks = $false
+$excel.AutomationSecurity = 3
 $writer = $null
 try {{
-  $wb = $excel.Workbooks.Open('{str(path)}', 0, $true)
+  $wb = $excel.Workbooks.Open('{str(path)}', 0, $true, [Type]::Missing, [Type]::Missing, [Type]::Missing, $true)
   $writer = [System.IO.StreamWriter]::new('{str(out)}', $false, [System.Text.UTF8Encoding]::new($true))
   foreach($sheetName in @('旅色_国内版','旅色_多言語独自ページ制作')) {{
     $ws = $wb.Worksheets.Item($sheetName)
@@ -277,9 +288,14 @@ def service_amount_count(rows, plan_name: str):
 
 
 def normalize_hp_plan(value) -> str:
-    text = str(value).replace("。", " ").replace("、", " ").strip()
-    text = re.sub(r"\s*\d+月.*$", "", text).strip()
-    return HP_ALIASES.get(text, text)
+    # Handle boolean True/False before string conversion
+    if isinstance(value, bool):
+        text = "true" if value else "false"
+    else:
+        text = str(value).replace("。", " ").replace("、", " ").strip()
+        text = re.sub(r"\s*\d+月.*$", "", text).strip()
+    # Check aliases with original case first, then lowercase
+    return HP_ALIASES.get(text) or HP_ALIASES.get(text.lower()) or text
 
 
 def unprotect_workbook(wb):
@@ -290,6 +306,18 @@ def unprotect_workbook(wb):
         ws.protection.sheet = False
         ws.protection.objects = False
         ws.protection.scenarios = False
+
+
+def safe_replace(src: Path, dst: Path):
+    for i in range(10):
+        try:
+            if dst.exists():
+                dst.unlink()
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            time.sleep(0.2)
+    os.replace(src, dst)
 
 
 def strip_workbook_xml(path: Path, *, remove_protection: bool = True, remove_phonetics: bool = True):
@@ -310,7 +338,7 @@ def strip_workbook_xml(path: Path, *, remove_protection: bool = True, remove_pho
                     text = re.sub(r"<phoneticPr\b[^>]*>.*?</phoneticPr>", "", text, flags=re.DOTALL)
                 data = text.encode("utf-8")
             zout.writestr(item, data)
-    os.replace(tmp, path)
+    safe_replace(tmp, path)
 
 
 def sheet_xml_path(zipped_workbook: ZipFile, sheet_name: str) -> str:
@@ -352,7 +380,7 @@ def restore_column_widths_xml(template_path: Path, generated_path: Path, sheet_n
                 text = data.decode("utf-8")
                 data = replace_cols_xml(text, template_cols).encode("utf-8")
             zout.writestr(item, data)
-    os.replace(tmp, generated_path)
+    safe_replace(tmp, generated_path)
 
 
 def merged_non_top_left(ws):
@@ -418,11 +446,15 @@ def restore_template_layout(template_path: Path, generated_path: Path, sheet_nam
     ps = rf'''
 $ErrorActionPreference = 'Stop'
 $data = Get-Content -LiteralPath '{changes_path}' -Encoding UTF8 -Raw | ConvertFrom-Json
+# Remove Zone.Identifier (Protected View block) from the file
+Unblock-File -LiteralPath $data.path -ErrorAction SilentlyContinue
 $excel = New-Object -ComObject Excel.Application
 $excel.Visible = $false
 $excel.DisplayAlerts = $false
+$excel.AskToUpdateLinks = $false
+$excel.AutomationSecurity = 3
 try {{
-  $wb = $excel.Workbooks.Open($data.path)
+  $wb = $excel.Workbooks.Open($data.path, 0, $false, [Type]::Missing, [Type]::Missing, [Type]::Missing, $true)
   try {{
     $ws = $wb.Worksheets.Item($data.sheet)
     try {{ $ws.Unprotect() | Out-Null }} catch {{}}
@@ -452,7 +484,12 @@ try {{
 }}
 '''
     try:
-        subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], check=True)
+        print(f"[PS] Starting PowerShell for restore_template_layout...", flush=True)
+        subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+            check=True, timeout=300,
+        )
+        print(f"[PS] PowerShell done. Running strip_workbook_xml...", flush=True)
         strip_workbook_xml(generated_path, remove_protection=True, remove_phonetics=True)
         restore_column_widths_xml(template_path, generated_path, sheet_name)
     finally:
@@ -517,14 +554,35 @@ def fill_service_block(ws, *, date_cells, months_cell, facilities_cell, list_cel
         ws[per_cell] = 0
 
 
-def parse_payment_start(value, default_year=2026):
+def parse_payment_start(value, pub_year: int, pub_month: int):
+    """Parse payment start month.
+
+    Supported formats:
+      - "n"       -> publication month (day is always 23)
+      - "n+1"     -> publication month + 1
+      - "n+2"     -> publication month + 2  (etc.)
+      - "7" / "7月" -> July of publication year
+      - "2026年8月" -> August 2026
+      - None / empty -> None
+
+    Returns (yy, mm) where yy is 2-digit year, or None.
+    """
     if not value:
         return None
-    nums = [int(n) for n in re.findall(r"\d+", str(value))]
+    text = str(value).strip().lower()
+    # Handle "n", "n+1", "n+2", etc.
+    m = re.match(r"^n\s*(?:\+\s*(\d+))?$", text)
+    if m:
+        offset = int(m.group(1)) if m.group(1) else 0
+        y, mo = add_months(pub_year, pub_month, offset)
+        return y - 2000, mo
+    # Explicit year+month (e.g. "2026年8月" or "2026/8")
+    nums = [int(n) for n in re.findall(r"\d+", text)]
     if len(nums) >= 2 and nums[0] > 1900:
         return nums[0] - 2000, nums[1]
+    # Single number -> month in publication year
     if nums:
-        return default_year - 2000, nums[0]
+        return pub_year - 2000, nums[0]
     return None
 
 
@@ -554,7 +612,7 @@ def fill_main_form(data: dict, rows, out_dir: Path, year: int, month: int) -> Pa
     main_list = plan_tax_in_without_shinchaku(plan_row)
     main_paid, shinchaku_paid = allocate_amount(acquired, main_list, has_shinchaku)
     payment = str(data.get("支払方法", ""))
-    payment_start = parse_payment_start(data.get("支払い開始月", data.get("支払開始月")), year)
+    payment_start = parse_payment_start(data.get("支払い開始月", data.get("支払開始月")), pub_year=year, pub_month=month)
     main_count = plan_payment_count(plan_row)
 
     fill_service_block(
@@ -574,6 +632,11 @@ def fill_main_form(data: dict, rows, out_dir: Path, year: int, month: int) -> Pa
         paid_amount=main_paid,
         payment_count=main_count,
     )
+    # イントロオプションサービスのチェックボックス (Row 9: BB9=あり, BG9=なし)
+    has_intro = truthy(data.get("イントロ", data.get("イントロオプション")))
+    ws["BB9"] = "☑" if has_intro else "□"
+    ws["BG9"] = "□" if has_intro else "☑"
+
     if main_paid > 0 and "口座" in payment:
         ws["BP8"] = "☑"
         set_payment_start(ws, "BQ10", "BS10", payment_start)
@@ -775,18 +838,30 @@ def create_option_form(data: dict, rows, out_dir: Path, year: int, month: int) -
 
 def fill_application(data: dict):
     year, month = parse_month(data["掲載月"], data.get("年", 2026))
+    print(f"[A] load_plan_rows...", flush=True)
     rows = load_plan_rows(Path(data.get("plan_csv", DEFAULT_PLAN_CSV)))
+    print(f"[B] plan rows loaded: {len(rows)}", flush=True)
     safe_plan = re.sub(r"[^\w一-龥ぁ-んァ-ンー]+", "_", data["本誌プラン名"])
     out_dir = Path(data.get("output_root", DEFAULT_OUTPUT_ROOT)) / f"tabiiro_{year}{month:02d}_{safe_plan}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    print(f"[C] fill_main_form...", flush=True)
     outputs = [fill_main_form(data, rows, out_dir, year, month)]
+    print(f"[D] fill_main_form done: {outputs[0]}", flush=True)
     if specified(data.get("PR記事")):
+        print(f"[E] create_option_form...", flush=True)
         outputs.append(create_option_form(data, rows, out_dir, year, month))
+        print(f"[F] option form done", flush=True)
     return outputs
 
 
 def read_input():
+    # Check command-line file argument FIRST to avoid blocking on stdin.
+    if len(sys.argv) > 1:
+        raw = Path(sys.argv[1]).read_text(encoding="utf-8-sig").strip()
+        if raw:
+            return json.loads(raw)
+    # Fall back to stdin only when no file argument is given.
     raw_bytes = sys.stdin.buffer.read()
     raw = ""
     if raw_bytes:
@@ -796,15 +871,18 @@ def read_input():
                 break
             except UnicodeDecodeError:
                 pass
-    if not raw and len(sys.argv) > 1:
-        raw = Path(sys.argv[1]).read_text(encoding="utf-8-sig")
     if not raw:
         raise SystemExit("JSON input is required via stdin or file path argument.")
     return json.loads(raw)
 
 
 def main():
-    outputs = fill_application(read_input())
+    import time as _time
+    print("[1] Reading input...", flush=True)
+    data = read_input()
+    print("[2] Calling fill_application...", flush=True)
+    outputs = fill_application(data)
+    print("[3] Done.", flush=True)
     print(json.dumps({"outputs": [str(p) for p in outputs]}, ensure_ascii=False, indent=2))
 
 
