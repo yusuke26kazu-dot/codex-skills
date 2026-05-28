@@ -432,7 +432,15 @@ def capture_theme_ranking_screenshots(themes, facility_name, output_dir):
     counts = {}
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(viewport={'width': 1280, 'height': 8000})
+        context = browser.new_context(
+            viewport={'width': 1280, 'height': 8000},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            java_script_enabled=False,
+            extra_http_headers={
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
+            }
+        )
         page = context.new_page()
         
         for i, item in enumerate(themes):
@@ -441,54 +449,90 @@ def capture_theme_ranking_screenshots(themes, facility_name, output_dir):
             code_idx = item.get("code_idx", i)
             print(f"Capturing ranking screenshots for {name} ({url})")
             try:
-                page.goto(url, wait_until='networkidle', timeout=30000)
-                page.evaluate("document.querySelectorAll('.header, .footer, .fixed-elements').forEach(e => e.style.display = 'none');")
+                page.goto(url, wait_until='load', timeout=30000)
+                try:
+                    page.evaluate("document.querySelectorAll('.header, .footer, .fixed-elements').forEach(e => e.style.display = 'none');")
+                except Exception: pass
                 
                 # Expand listing
-                page.evaluate('''() => {
-                    const btns = document.querySelectorAll('a, button');
-                    for (let btn of btns) {
-                        if (btn.innerText && btn.innerText.includes('もっと見る')) {
-                            btn.click();
+                try:
+                    page.evaluate('''() => {
+                        const btns = document.querySelectorAll('a, button');
+                        for (let btn of btns) {
+                            if (btn.innerText && btn.innerText.includes('もっと見る')) {
+                                btn.click();
+                            }
                         }
-                    }
-                }''')
-                page.wait_for_timeout(1500)
+                    }''')
+                except Exception: pass
+                try: page.wait_for_timeout(1000)
+                except Exception: pass
+                
+                # Take full page debug screenshot
+                try:
+                    page.screenshot(path=os.path.join(output_dir, f"ranking_page_debug_{code_idx}.png"), full_page=True)
+                    print(f"  Saved ranking page debug screenshot to ranking_page_debug_{code_idx}.png")
+                except Exception as e:
+                    print(f"  Failed to save debug screenshot: {e}")
                 
                 # 1. Capture Facility Detail Card
-                h3_elem = page.locator(f"h3:has-text('{facility_name}')").first
-                if h3_elem.count() > 0:
-                    card_locators = page.locator(f"xpath=//*[contains(@class, 'ranking-card') and .//h3[contains(text(), '{facility_name}')]]")
-                    card_locator = None
-                    for idx in range(card_locators.count()):
-                        loc = card_locators.nth(idx)
-                        if loc.is_visible():
-                            card_locator = loc
-                            break
-                    if not card_locator and card_locators.count() > 0:
-                        card_locator = card_locators.first
+                shop_id = item.get("shop_id")
+                card_locator = None
+                
+                if shop_id:
+                    loc_candidates = [
+                        page.locator(f"li.item:has(a[href*='/s/{shop_id}'])").first,
+                        page.locator(f"li:has(a[href*='/s/{shop_id}'])").first,
+                        page.locator(f"div:has(a[href*='/s/{shop_id}'])").first
+                    ]
+                    for loc in loc_candidates:
+                        try:
+                            if loc.count() > 0:
+                                card_locator = loc
+                                break
+                        except Exception: pass
+                        
+                if not card_locator:
+                    h3_elem = page.locator(f"h3:has-text('{facility_name}')").first
+                    if h3_elem.count() > 0:
+                        card_locators = page.locator(f"xpath=//*[contains(@class, 'ranking-card') and .//h3[contains(text(), '{facility_name}')]]")
+                        for idx in range(card_locators.count()):
+                            loc = card_locators.nth(idx)
+                            if loc.count() > 0:
+                                card_locator = loc
+                                break
+                        if not card_locator and card_locators.count() > 0:
+                            card_locator = card_locators.first
                     
-                    if card_locator:
-                        card_locator.screenshot(path=os.path.join(output_dir, f"facility_{code_idx}.png"))
+                if card_locator:
+                    card_locator.screenshot(path=os.path.join(output_dir, f"facility_{code_idx}.png"))
+                    print(f"  Successfully captured ranking card for shop {shop_id or facility_name}")
+                else:
+                    print(f"  Warning: ranking card for shop {shop_id or facility_name} not found!")
                 
                 # 2. Capture Sidebar Ranking
-                page.evaluate('''() => {
-                    const btns = document.querySelectorAll('.ranking_list a, .ranking_list button');
-                    for (let btn of btns) {
-                        if (btn.innerText && btn.innerText.includes('もっと見る')) {
-                            btn.click();
+                try:
+                    page.evaluate('''() => {
+                        const btns = document.querySelectorAll('.ranking_list a, .ranking_list button');
+                        for (let btn of btns) {
+                            if (btn.innerText && btn.innerText.includes('もっと見る')) {
+                                btn.click();
+                            }
                         }
-                    }
-                }''')
-                page.wait_for_timeout(1000)
-                page.evaluate('''() => {
-                    const btns = document.querySelectorAll('.ranking_list a, .ranking_list button');
-                    for (let btn of btns) {
-                        if (btn.innerText && btn.innerText.includes('もっと見る')) {
-                            btn.style.display = 'none';
+                    }''')
+                except Exception: pass
+                try: page.wait_for_timeout(1000)
+                except Exception: pass
+                try:
+                    page.evaluate('''() => {
+                        const btns = document.querySelectorAll('.ranking_list a, .ranking_list button');
+                        for (let btn of btns) {
+                            if (btn.innerText && btn.innerText.includes('もっと見る')) {
+                                btn.style.display = 'none';
+                            }
                         }
-                    }
-                }''')
+                    }''')
+                except Exception: pass
                 
                 sidebar_elem = page.locator('.ranking_list').first
                 if sidebar_elem.count() > 0:
@@ -1008,9 +1052,9 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
     official_hp_url = config.get("official_hp_url") or config.get("official_hp")
     
     img_dir = os.path.abspath("images")
-    if os.path.exists(img_dir):
-        try: shutil.rmtree(img_dir)
-        except Exception: pass
+    # if os.path.exists(img_dir):
+    #     try: shutil.rmtree(img_dir)
+    #     except Exception: pass
     os.makedirs(img_dir, exist_ok=True)
     
     # 1. Fetch magazine pop-up
@@ -1090,12 +1134,21 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
     rank_screenshots_params = []
     for item in genre_rankings_data:
         if item.get("list_count", 0) >= 10:
+            code_idx = item.get("code_idx")
+            sidebar_path = os.path.join(img_dir, f"sidebar_stitched_{code_idx}.png")
+            facility_path = os.path.join(img_dir, f"facility_{code_idx}.png")
+            if os.path.exists(sidebar_path) and os.path.exists(facility_path):
+                print(f"Skipping capture for {item['name']}: images already exist locally.")
+                continue
+                
             rank_screenshots_params.append({
                 "name": item["name"],
                 "url": item["url"],
-                "code_idx": item.get("code_idx")
+                "code_idx": item.get("code_idx"),
+                "shop_id": shop_id
             })
-    counts = capture_theme_ranking_screenshots(rank_screenshots_params, shop_name, img_dir)
+    if rank_screenshots_params:
+        counts = capture_theme_ranking_screenshots(rank_screenshots_params, shop_name, img_dir)
     
     # 5. Load PowerPoint template
     local_temp_path = os.path.abspath("temp_processing.pptx")
@@ -1211,7 +1264,16 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
                 except Exception: pass
                 
             # Paste sidebar screenshot
+            if code_idx is None:
+                try:
+                    orig_idx = genre_rankings_data.index(item)
+                    code_idx = orig_idx
+                except ValueError:
+                    code_idx = 0
+            
+            print(f"DEBUG: Processing slide for '{name}' with code_idx={code_idx}")
             sidebar_path = os.path.join(img_dir, f"sidebar_stitched_{code_idx}.png")
+            print(f"DEBUG: sidebar_path={sidebar_path}, exists={os.path.exists(sidebar_path)}")
             if os.path.exists(sidebar_path):
                 pic_sidebar = new_slide.Shapes.AddPicture(sidebar_path, False, True, 0, 0, -1, -1)
                 pic_sidebar.LockAspectRatio = 0
@@ -1222,9 +1284,13 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
                 pic_sidebar.Height = 11.17 * 28.346
                 pic_sidebar.Left = 3.2 * 28.346
                 pic_sidebar.Top = 4.91 * 28.346
+                print("DEBUG: Placed sidebar picture.")
+            else:
+                print("DEBUG: Sidebar picture not found, skipping...")
                 
             # Paste facility detail card
             facility_path = os.path.join(img_dir, f"facility_{code_idx}.png")
+            print(f"DEBUG: facility_path={facility_path}, exists={os.path.exists(facility_path)}")
             if os.path.exists(facility_path):
                 pic_fac = new_slide.Shapes.AddPicture(facility_path, False, True, 0, 0, -1, -1)
                 pic_fac.LockAspectRatio = 0
@@ -1232,6 +1298,9 @@ def compile_presentation(config, template_pptx_path, output_pptx_path, summary_o
                 pic_fac.Height = 11.17 * 28.346
                 pic_fac.Left = 13.3 * 28.346
                 pic_fac.Top = 4.91 * 28.346
+                print("DEBUG: Placed facility picture.")
+            else:
+                print("DEBUG: Facility picture not found, skipping...")
         genre_base_slide.Delete()
         
     # F. Slide Cleanup Loop
