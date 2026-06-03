@@ -121,41 +121,65 @@ function handleFile(file) {
     const fileNameEl = document.getElementById('loading-file-name');
     const stepTextEl = document.getElementById('loading-step-text');
 
-    // Show loading
-    fileNameEl.textContent = `対象ファイル: ${file.name}`;
-    stepTextEl.textContent = 'エクセルファイルを読み込んでいます...';
-    loadStateEl.classList.remove('hidden');
-    document.getElementById('empty-state').classList.add('hidden');
-    document.getElementById('dashboard-result').classList.add('hidden');
+    // Show loading safely
+    if (fileNameEl) fileNameEl.textContent = `対象ファイル: ${file.name}`;
+    if (stepTextEl) stepTextEl.textContent = 'エクセルファイルを読み込んでいます...';
+    if (loadStateEl) loadStateEl.classList.remove('hidden');
+    
+    const emptyState = document.getElementById('empty-state');
+    if (emptyState) emptyState.classList.add('hidden');
+    
+    const dashboardResult = document.getElementById('dashboard-result');
+    if (dashboardResult) dashboardResult.classList.add('hidden');
 
     const reader = new FileReader();
+    
+    reader.onerror = function(err) {
+        console.error('File reader error:', err);
+        alert('ファイルの読み込みに失敗しました。');
+        if (loadStateEl) loadStateEl.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+    };
+
     reader.onload = function(e) {
-        // Step 1: Wait for repaint and update message
-        setTimeout(() => {
-            stepTextEl.textContent = '経費精算ルールと明細データの照合中...';
+        try {
+            const arrayBuffer = e.target.result; // Store immediately!
+            if (!arrayBuffer) {
+                throw new Error('読み込まれたデータが空です。');
+            }
             
-            // Step 2: Perform processing in the next tick to ensure the DOM updates
+            // Step 1: Wait for repaint and update message
             setTimeout(() => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array', cellDates: true, cellNF: false, cellText: false});
-                    
-                    // Assume the first sheet is the target
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // Convert to 2D Array to handle freely
-                    const sheetData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
-                    
-                    processExcelData(sheetData, file.name);
-                } catch (error) {
-                    console.error('File parsing error:', error);
-                    alert('ファイルの読み込み中にエラーが発生しました。ファイル形式を確認してください。');
-                    loadStateEl.classList.add('hidden');
-                    document.getElementById('empty-state').classList.remove('hidden');
-                }
-            }, 300); // 300ms pause to show Rule Verification step clearly
-        }, 300); // 300ms pause to show Reading file step clearly
+                if (stepTextEl) stepTextEl.textContent = '経費精算ルールと明細データの照合中...';
+                
+                // Step 2: Perform processing in the next tick to ensure the DOM updates
+                setTimeout(() => {
+                    try {
+                        const data = new Uint8Array(arrayBuffer);
+                        const workbook = XLSX.read(data, {type: 'array', cellDates: true, cellNF: false, cellText: false});
+                        
+                        // Assume the first sheet is the target
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to 2D Array to handle freely
+                        const sheetData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
+                        
+                        processExcelData(sheetData, file.name);
+                    } catch (error) {
+                        console.error('File parsing error:', error);
+                        alert('ファイルの読み込み中にエラーが発生しました。ファイル形式を確認してください。');
+                        if (loadStateEl) loadStateEl.classList.add('hidden');
+                        if (emptyState) emptyState.classList.remove('hidden');
+                    }
+                }, 300); // 300ms pause to show Rule Verification step clearly
+            }, 300); // 300ms pause to show Reading file step clearly
+        } catch (outerError) {
+            console.error('Outer reader error:', outerError);
+            alert('ファイルの処理開始時にエラーが発生しました。');
+            if (loadStateEl) loadStateEl.classList.add('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
+        }
     };
     reader.readAsArrayBuffer(file);
 }
