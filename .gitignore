@@ -5,6 +5,9 @@ Thumbs.db
 
 # Heavy assets and screenshots
 *.pptx
+*.xls
+*.xlsx
+*.xlsm
 images/
 test_images/
 *.png
