@@ -700,6 +700,51 @@ function runValidationChecks() {
                     '経費科目'
                 );
             }
+
+            // --- 6. 訪問先からの戻り（帰宅・帰社）確認 ---
+            const hasVisit = trainTravels.some(t => {
+                const isCommuteOnly = (t.start.includes(homeStation) && t.end.includes(companyStation)) ||
+                                      (t.start.includes(companyStation) && t.end.includes(homeStation));
+                return !isCommuteOnly;
+            }) || dayRows.some(r => r.category.includes('交通費(駐車場)') || r.category.includes('交通費(ガソリン)'));
+
+            if (hasVisit) {
+                let hasReturnLeg = false;
+
+                // 1. Commuter return: hasRoundCommute or hasEveningCommute
+                if (hasRoundCommute || hasEveningCommute) {
+                    hasReturnLeg = true;
+                }
+
+                // 2. Transport return: contains "帰宅" or "帰社", or ends at HOME/COMPANY
+                dayRows.forEach(row => {
+                    if (row.category.startsWith('交通費') && !row.category.includes('駐車場') && !row.category.includes('ガソリン')) {
+                        if (row.payee.includes('帰宅') || row.payee.includes('帰社')) {
+                            hasReturnLeg = true;
+                        }
+                        const route = parseRoute(row.payee);
+                        if (route) {
+                            if (route.end.includes(homeStation) || route.end.includes(companyStation)) {
+                                hasReturnLeg = true;
+                            }
+                            if (route.isRound && (route.start.includes(homeStation) || route.start.includes(companyStation) || route.end.includes(homeStation) || route.end.includes(companyStation))) {
+                                hasReturnLeg = true;
+                            }
+                        }
+                    }
+                });
+
+                if (!hasReturnLeg) {
+                    const targetRow = dayRows[0];
+                    addRowIssue(
+                        targetRow,
+                        'warning',
+                        '訪問先からの戻り未申請',
+                        `${dateStr} に訪問先への移動（または駐車場・ガソリンの利用）がありますが、同日に「帰宅」または「帰社」の経費申請が見つかりません。`,
+                        '経費科目'
+                    );
+                }
+            }
         });
     } else {
         console.warn('Could not determine home station. Commuter completeness check skipped.');
