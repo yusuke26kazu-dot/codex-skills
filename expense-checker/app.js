@@ -740,7 +740,7 @@ function runValidationChecks() {
                         targetRow,
                         'warning',
                         '訪問先からの戻り未申請',
-                        `${dateStr} に訪問先への移動（または駐車場・ガソリンの利用）がありますが、同日に「帰宅」または「帰社」の経費申請が見つかりません。（※車移動の場合は、これらの戻り申請がなくて正しい場合があります）`,
+                        `${dateStr} に訪問先への移動（または駐車場・ガソリンの利用）がありますが、同日に「帰宅」または「帰社」の経費申請が見つかりません。`,
                         '経費科目'
                     );
                 }
@@ -796,16 +796,20 @@ function renderIssues() {
         statusVal.className = 'summary-val status-ok';
     }
 
+    const noticeBox = document.getElementById('notice-box');
+
     if (currentIssues.length === 0) {
+        if (noticeBox) noticeBox.classList.add('hidden');
         issuesContainer.innerHTML = `
             <div class="empty-state">
                 <span class="material-icons" style="font-size: 3rem; color: var(--success); margin-bottom: 1rem;">check_circle</span>
-                <p>チェック完了。不備や確認事項は見つかりませんでした！</p>
+                <p style="font-size: 1.25rem; font-weight: 600; color: var(--success);">確認事項はありません🎉</p>
             </div>
         `;
         return;
     }
 
+    if (noticeBox) noticeBox.classList.remove('hidden');
     filterIssues('all');
 }
 
