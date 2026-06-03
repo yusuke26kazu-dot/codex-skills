@@ -34,8 +34,10 @@
         <!-- Loading State -->
         <div class="card hidden" id="loading-state">
             <div class="loader"></div>
-            <p style="text-align: center; color: var(--text-secondary);">エクセルファイルを解析中...</p>
+            <div id="loading-file-name" style="text-align: center; font-weight: 600; margin-top: 1rem; color: var(--primary);"></div>
+            <p id="loading-step-text" style="text-align: center; color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.5rem;">ファイルを解析中...</p>
         </div>
+
 
         <!-- Empty State -->
         <div class="empty-state" id="empty-state">
