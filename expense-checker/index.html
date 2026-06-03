@@ -46,10 +46,10 @@
 
         <!-- Dashboard Result Panel -->
         <div class="dashboard-grid hidden" id="dashboard-result">
-            <!-- Sidebar: Details and Issues -->
-            <div class="summary-container">
+            <!-- Top Horizontal Grid: Summary Cards -->
+            <div class="summary-row">
                 <!-- Status summary -->
-                <div class="summary-card" id="status-card">
+                <div class="summary-card" id="status-card" style="grid-column: span 2;">
                     <span class="summary-label">判定ステータス</span>
                     <span class="summary-val status-ok" id="status-value">良好</span>
                 </div>
@@ -64,52 +64,64 @@
                     <span class="summary-val" id="val-emp-id">-</span>
                 </div>
                 <div class="summary-card">
-                    <span class="summary-label">申請日</span>
-                    <span class="summary-val" id="val-date">-</span>
+                    <span class="summary-label">所属</span>
+                    <span class="summary-val" style="font-size: 1.15rem;" id="val-dept">-</span>
                 </div>
                 <div class="summary-card">
-                    <span class="summary-label">所属</span>
-                    <span class="summary-val" style="font-size: 1.1rem;" id="val-dept">-</span>
+                    <span class="summary-label">申請日</span>
+                    <span class="summary-val" id="val-date">-</span>
                 </div>
                 <div class="summary-card">
                     <span class="summary-label">合計金額 (申告)</span>
                     <span class="summary-val total-amount" id="val-amount">¥0</span>
                 </div>
+            </div>
 
-                <!-- Issue Filters and List -->
-                <div class="card" style="padding: 1.25rem; margin-bottom: 0;">
-                    <div class="tabs">
-                        <button class="tab-btn active" data-tab="all">
-                            すべて
-                        </button>
-                        <button class="tab-btn" data-tab="errors">
-                            エラー <span class="alert-count-badge" id="error-count">0</span>
-                        </button>
-                        <button class="tab-btn" data-tab="warnings">
-                            警告 <span class="warning-count-badge" id="warning-count">0</span>
-                        </button>
-                    </div>
-                    <div class="issues-list" id="issues-list">
-                        <!-- Filled by JS -->
-                    </div>
+            <!-- Middle Section: Main Focus "確認項目" -->
+            <div class="card" style="padding: 2rem; margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">確認項目（チェック結果）</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary);">ルールに基づいて自動検知した不備や確認事項です</p>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="all">
+                        すべて
+                    </button>
+                    <button class="tab-btn" data-tab="errors">
+                        エラー <span class="alert-count-badge" id="error-count">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="warnings">
+                        警告 <span class="warning-count-badge" id="warning-count">0</span>
+                    </button>
+                </div>
+                <div class="issues-list" id="issues-list" style="max-height: none; overflow-y: visible;">
+                    <!-- Filled by JS -->
                 </div>
             </div>
 
-            <!-- Spreadsheet Details View -->
-            <div class="card" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.25rem; font-weight: 700;">明細一覧データ</h2>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">※不備のある行をクリックすると詳細を表示します。</div>
-                </div>
-                <div class="table-wrapper">
-                    <table>
-                        <thead id="table-header">
-                            <!-- Filled by JS -->
-                        </thead>
-                        <tbody id="table-body">
-                            <!-- Filled by JS -->
-                        </tbody>
-                    </table>
+            <!-- Bottom Section: Collapsible Spreadsheet Details View -->
+            <div class="card" style="padding: 1.5rem;">
+                <button id="toggle-table-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); color: var(--text-primary); padding: 0.85rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s;">
+                    <span class="material-icons" id="toggle-icon">expand_more</span>
+                    <span id="toggle-text">元の明細データを表示する</span>
+                </button>
+                
+                <div class="hidden" id="table-container" style="margin-top: 1.5rem; display: flex; flex-direction: column; overflow: hidden;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600;">明細一覧データ</h3>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">※不備のある行をクリックすると詳細を表示します。</div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead id="table-header">
+                                <!-- Filled by JS -->
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

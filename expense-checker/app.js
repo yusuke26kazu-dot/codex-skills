@@ -108,6 +108,27 @@ function setupEventListeners() {
             filterIssues(btn.dataset.tab);
         });
     });
+
+    // Toggle table visibility
+    const toggleTableBtn = document.getElementById('toggle-table-btn');
+    const tableContainer = document.getElementById('table-container');
+    const toggleIcon = document.getElementById('toggle-icon');
+    const toggleText = document.getElementById('toggle-text');
+    
+    if (toggleTableBtn && tableContainer) {
+        toggleTableBtn.addEventListener('click', () => {
+            const isHidden = tableContainer.classList.contains('hidden');
+            if (isHidden) {
+                tableContainer.classList.remove('hidden');
+                if (toggleIcon) toggleIcon.textContent = 'expand_less';
+                if (toggleText) toggleText.textContent = '元の明細データを非表示にする';
+            } else {
+                tableContainer.classList.add('hidden');
+                if (toggleIcon) toggleIcon.textContent = 'expand_more';
+                if (toggleText) toggleText.textContent = '元の明細データを表示する';
+            }
+        });
+    }
 }
 
 // Handle uploaded file
@@ -392,15 +413,35 @@ function processExcelData(sheetData, filename) {
     runValidationChecks();
 
     // 5. Update UI
-    document.getElementById('loading-state').classList.add('hidden');
-    document.getElementById('dashboard-result').classList.remove('hidden');
+    const loadStateEl = document.getElementById('loading-state');
+    if (loadStateEl) loadStateEl.classList.add('hidden');
+    
+    const dashboardResult = document.getElementById('dashboard-result');
+    if (dashboardResult) dashboardResult.classList.remove('hidden');
 
-    // Fill Summary
-    document.getElementById('val-applicant').textContent = applicantName;
-    document.getElementById('val-emp-id').textContent = employeeId;
-    document.getElementById('val-date').textContent = applicationDate;
-    document.getElementById('val-dept').textContent = deptName;
-    document.getElementById('val-amount').textContent = `¥${totalAmountClaimed.toLocaleString()}`;
+    // Reset Table visibility state to collapsed on load
+    const tableContainer = document.getElementById('table-container');
+    if (tableContainer) tableContainer.classList.add('hidden');
+    const toggleIcon = document.getElementById('toggle-icon');
+    if (toggleIcon) toggleIcon.textContent = 'expand_more';
+    const toggleText = document.getElementById('toggle-text');
+    if (toggleText) toggleText.textContent = '元の明細データを表示する';
+
+    // Fill Summary safely
+    const valApplicant = document.getElementById('val-applicant');
+    if (valApplicant) valApplicant.textContent = applicantName;
+    
+    const valEmpId = document.getElementById('val-emp-id');
+    if (valEmpId) valEmpId.textContent = employeeId;
+    
+    const valDate = document.getElementById('val-date');
+    if (valDate) valDate.textContent = applicationDate;
+    
+    const valDept = document.getElementById('val-dept');
+    if (valDept) valDept.textContent = deptName;
+    
+    const valAmount = document.getElementById('val-amount');
+    if (valAmount) valAmount.textContent = `¥${totalAmountClaimed.toLocaleString()}`;
     
     // Verification check for totals
     if (Math.abs(calculatedTotal - totalAmountClaimed) > 1) {

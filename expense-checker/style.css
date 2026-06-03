@@ -171,17 +171,18 @@ h1 {
     color: var(--text-secondary);
 }
 
-/* Main Layout Grid */
+/* Main Layout */
 .dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-@media (min-width: 1024px) {
-    .dashboard-grid {
-        grid-template-columns: 320px 1fr;
-    }
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    width: 100%;
 }
 
 /* Summary Panel */
