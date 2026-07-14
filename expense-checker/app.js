@@ -213,7 +213,7 @@ function parseRoute(text) {
     
     let parts = text.split(separator);
     let leftPart = parts[0].trim();
-    let rightPart = parts[1].trim();
+    let rightPart = parts[parts.length - 1].trim(); // Get final destination
     
     let startStation = extractLastParentheses(leftPart);
     let endStation = extractFirstParentheses(rightPart);
@@ -566,7 +566,23 @@ function runValidationChecks() {
                                   
         if (isNormalTransport) {
             // 2.1 利用目的および経費科目チェック
-            const hasCommuteKeyword = (row.payee.includes('出社') || row.payee.includes('帰宅')) && row.payee.includes('本町');
+            let isHonmachiStartOrEnd = false;
+            const route = parseRoute(row.payee);
+            if (route) {
+                if (route.start.includes('本町') || route.end.includes('本町')) {
+                    isHonmachiStartOrEnd = true;
+                }
+            } else {
+                const cleanedPayee = row.payee.trim();
+                if (cleanedPayee.startsWith('本町') || 
+                    cleanedPayee.endsWith('本町') ||
+                    cleanedPayee.includes('(本町)') || 
+                    cleanedPayee.includes('（本町）')) {
+                    isHonmachiStartOrEnd = true;
+                }
+            }
+
+            const hasCommuteKeyword = (row.payee.includes('出社') || row.payee.includes('帰宅')) && isHonmachiStartOrEnd;
             if (hasCommuteKeyword) {
                 addRowIssue(row, 'error', '経費科目エラー（通勤費）', '支払先内容に「出社」または「帰宅」が含まれていますが、経費科目が「交通費」になっています。通勤の精算には「通勤費」を選択してください。', '経費科目');
             } else {
