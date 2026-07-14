@@ -461,6 +461,7 @@ function runValidationChecks() {
             rowIdx: row.excelRowIdx,
             excelNo: row.no,
             date: row.rawDate,
+            payee: row.payee,
             category: row.category,
             title: title,
             desc: desc,
@@ -871,9 +872,12 @@ function filterIssues(tab) {
         
         const icon = issue.type === 'error' ? 'cancel' : 'warning';
         
-        let cellText = issue.cellName !== '-' ? `${issue.cellName}セル` : '';
-        let rowText = issue.rowIdx !== -1 ? `[No.${issue.excelNo}]` : '';
-        let locText = cellText || rowText ? `<div class="issue-loc" onclick="focusRow(${issue.rowIdx})">${rowText} ${cellText}</div>` : '';
+        let locText = '';
+        if (issue.rowIdx !== -1) {
+            const displayDate = issue.date || '';
+            const displayPayee = issue.payee || '';
+            locText = `<div class="issue-loc" onclick="focusRow(${issue.rowIdx})">[${displayDate}] ${displayPayee}</div>`;
+        }
 
         item.innerHTML = `
             <span class="material-icons issue-icon">${icon}</span>
