@@ -720,33 +720,60 @@ function runValidationChecks() {
             }) || dayRows.some(r => r.category.includes('交通費(駐車場)') || r.category.includes('交通費(ガソリン)'));
 
             if (hasVisit) {
-                let hasReturnLeg = false;
+                const hasCommuterReturn = hasRoundCommute || hasEveningCommute;
+                let hasReturnToCompany = false;
+                let hasReturnToHome = false;
+
                 dayRows.forEach(row => {
                     if (row.category.startsWith('交通費') && !row.category.includes('駐車場') && !row.category.includes('ガソリン')) {
-                        if (row.payee.includes('帰宅') || row.payee.includes('帰社')) {
-                            hasReturnLeg = true;
+                        if (row.payee.includes('帰社')) {
+                            hasReturnToCompany = true;
+                        }
+                        if (row.payee.includes('帰宅')) {
+                            hasReturnToHome = true;
                         }
                         const route = parseRoute(row.payee);
                         if (route) {
-                            if (route.end.includes(homeStation) || route.end.includes(companyStation)) {
-                                hasReturnLeg = true;
+                            if (route.end.includes(companyStation)) {
+                                hasReturnToCompany = true;
                             }
-                            if (route.isRound && (route.start.includes(homeStation) || route.start.includes(companyStation) || route.end.includes(homeStation) || route.end.includes(companyStation))) {
-                                hasReturnLeg = true;
+                            if (route.end.includes(homeStation)) {
+                                hasReturnToHome = true;
+                            }
+                            if (route.isRound) {
+                                if (route.start.includes(companyStation) || route.end.includes(companyStation)) {
+                                    hasReturnToCompany = true;
+                                }
+                                if (route.start.includes(homeStation) || route.end.includes(homeStation)) {
+                                    hasReturnToHome = true;
+                                }
                             }
                         }
                     }
                 });
 
-                if (!hasReturnLeg) {
-                    const targetRow = dayRows[0];
-                    addRowIssue(
-                        targetRow,
-                        'warning',
-                        '訪問先からの戻り未申請',
-                        `${dateStr} に訪問先への移動（または駐車場・ガソリンの利用）がありますが、同日に「帰宅」または「帰社」の経費申請が見つかりません。`,
-                        '経費科目'
-                    );
+                if (hasCommuterReturn) {
+                    if (!hasReturnToCompany) {
+                        const targetRow = dayRows[0];
+                        addRowIssue(
+                            targetRow,
+                            'warning',
+                            '訪問先からの戻り未申請',
+                            `${dateStr} に「往復」または「帰宅」の通勤費が申請されていますが、訪問先から会社に戻る「帰社」の経費申請が見つかりません。`,
+                            '経費科目'
+                        );
+                    }
+                } else {
+                    if (!hasReturnToHome) {
+                        const targetRow = dayRows[0];
+                        addRowIssue(
+                            targetRow,
+                            'warning',
+                            '訪問先からの戻り未申請',
+                            `${dateStr} に「帰宅」の通勤費申請がなく、訪問先から自宅に戻る「帰宅（交通費）」の経費申請も見つかりません。`,
+                            '経費科目'
+                        );
+                    }
                 }
             }
         });
