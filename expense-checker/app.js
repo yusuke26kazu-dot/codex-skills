@@ -565,12 +565,17 @@ function runValidationChecks() {
                                   !row.category.includes('ガソリン');
                                   
         if (isNormalTransport) {
-            // 2.1 利用目的チェック
-            const isPassionLeaders = row.projId && row.projId.includes('パッションリーダーズ') && row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
-            const hasPassionPurpose = row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
-            if (!isPassionLeaders && !hasPassionPurpose) {
-                if (!row.remarks.includes('【旅色営業のため】')) {
-                    addRowIssue(row, 'warning', '利用目的不備', '交通費の備考欄に利用目的「【旅色営業のため】」が含まれていません。', '備考・メモ');
+            // 2.1 利用目的および経費科目チェック
+            const hasCommuteKeyword = row.payee.includes('出社') || row.payee.includes('帰宅');
+            if (hasCommuteKeyword) {
+                addRowIssue(row, 'error', '経費科目エラー（通勤費）', '支払先内容に「出社」または「帰宅」が含まれていますが、経費科目が「交通費」になっています。通勤の精算には「通勤費」を選択してください。', '経費科目');
+            } else {
+                const isPassionLeaders = row.projId && row.projId.includes('パッションリーダーズ') && row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+                const hasPassionPurpose = row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+                if (!isPassionLeaders && !hasPassionPurpose) {
+                    if (!row.remarks.includes('【旅色営業のため】')) {
+                        addRowIssue(row, 'warning', '利用目的不備', '交通費の備考欄に利用目的「【旅色営業のため】」が含まれていません。', '備考・メモ');
+                    }
                 }
             }
             
