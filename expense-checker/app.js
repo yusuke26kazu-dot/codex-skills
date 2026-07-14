@@ -721,13 +721,6 @@ function runValidationChecks() {
 
             if (hasVisit) {
                 let hasReturnLeg = false;
-
-                // 1. Commuter return: hasRoundCommute or hasEveningCommute
-                if (hasRoundCommute || hasEveningCommute) {
-                    hasReturnLeg = true;
-                }
-
-                // 2. Transport return: contains "帰宅" or "帰社", or ends at HOME/COMPANY
                 dayRows.forEach(row => {
                     if (row.category.startsWith('交通費') && !row.category.includes('駐車場') && !row.category.includes('ガソリン')) {
                         if (row.payee.includes('帰宅') || row.payee.includes('帰社')) {
