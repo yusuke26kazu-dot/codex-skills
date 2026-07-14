@@ -526,8 +526,21 @@ function runValidationChecks() {
         // 1.1 プロジェクトIDチェック
         if (!row.projId) {
             addRowIssue(row, 'error', 'プロジェクトID未入力', 'プロジェクトIDが入力されていません。', 'プロジェクトID');
-        } else if (!row.projId.includes('電子雑誌') && !row.projId.includes('飲食')) {
-            addRowIssue(row, 'error', 'プロジェクトID不正', 'プロジェクトIDが「電子雑誌」または「飲食」のいずれでもありません。', 'プロジェクトID');
+        } else {
+            const hasValidProjId = row.projId.includes('電子雑誌') || 
+                                  row.projId.includes('飲食') || 
+                                  row.projId.includes('パッションリーダーズ');
+            if (!hasValidProjId) {
+                addRowIssue(row, 'error', 'プロジェクトID不正', 'プロジェクトIDが「電子雑誌」「飲食」または「パッションリーダーズ」のいずれでもありません。', 'プロジェクトID');
+            } else {
+                const hasPassionId = row.projId.includes('パッションリーダーズ');
+                const hasPassionPurpose = row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+                if (hasPassionId && !hasPassionPurpose) {
+                    addRowIssue(row, 'error', 'プロジェクトID不整合', 'プロジェクトIDが「パッションリーダーズ」ですが、備考欄に「利用目的【パッションリーダーズ手伝いのため】」が記載されていません。', '備考・メモ');
+                } else if (!hasPassionId && hasPassionPurpose) {
+                    addRowIssue(row, 'error', 'プロジェクトID不整合', '備考欄に「利用目的【パッションリーダーズ手伝いのため】」と記載されていますが、プロジェクトIDが「パッションリーダーズ」になっていません。', 'プロジェクトID');
+                }
+            }
         }
 
         // 1.2 土日祝日チェック
@@ -553,8 +566,12 @@ function runValidationChecks() {
                                   
         if (isNormalTransport) {
             // 2.1 利用目的チェック
-            if (!row.remarks.includes('【旅色営業のため】')) {
-                addRowIssue(row, 'warning', '利用目的不備', '交通費の備考欄に利用目的「【旅色営業のため】」が含まれていません。', '備考・メモ');
+            const isPassionLeaders = row.projId && row.projId.includes('パッションリーダーズ') && row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+            const hasPassionPurpose = row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+            if (!isPassionLeaders && !hasPassionPurpose) {
+                if (!row.remarks.includes('【旅色営業のため】')) {
+                    addRowIssue(row, 'warning', '利用目的不備', '交通費の備考欄に利用目的「【旅色営業のため】」が含まれていません。', '備考・メモ');
+                }
             }
             
             // 2.2 プロジェクトID一貫性のための収集
@@ -615,8 +632,12 @@ function runValidationChecks() {
                 addRowIssue(row, 'error', '駐車場支払先エラー', '支払先内容がルート表記（→や⇔）になっています。管理会社名を記載してください。', '支払先内容');
             }
             // 4.2 利用目的チェック
-            if (!row.remarks.includes('【旅色営業のため】')) {
-                addRowIssue(row, 'warning', '利用目的不備', '駐車場の備考欄に利用目的「【旅色営業のため】」が含まれていません。', '備考・メモ');
+            const isPassionLeaders = row.projId && row.projId.includes('パッションリーダーズ') && row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+            const hasPassionPurpose = row.remarks.includes('利用目的【パッションリーダーズ手伝いのため】');
+            if (!isPassionLeaders && !hasPassionPurpose) {
+                if (!row.remarks.includes('【旅色営業のため】')) {
+                    addRowIssue(row, 'warning', '利用目的不備', '駐車場の備考欄に利用目的「【旅色営業のため】」が含まれていません。', '備考・メモ');
+                }
             }
         }
 
