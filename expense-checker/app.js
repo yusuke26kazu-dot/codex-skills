@@ -565,6 +565,29 @@ function runValidationChecks() {
             if (row.payee.includes('新幹線') || row.remarks.includes('新幹線')) {
                 addRowIssue(row, 'error', '新幹線申請不可', '支払先または備考に「新幹線」の表記があります。別の精算経路、または事前承認が必要な項目です。', '支払先内容');
             }
+
+            // 2.4 バス移動のみチェック
+            const isBusCategory = row.category.includes('バス');
+            if (!isBusCategory) {
+                const payee = row.payee;
+                const remarks = row.remarks;
+                const hasBusText = payee.includes('バス') || remarks.includes('バス');
+                if (hasBusText) {
+                    const busCompanyPattern = /(東急|ＪＲ|JR|小田急|京王|西武|東武|京急|京成|名鉄|近鉄|南海|阪急|都営|都|市営|市|関東|国際興業|川崎鶴見臨港|立川|相鉄|相模鉄道|コミュニティ|シャトル)バス/g;
+                    const normalizedPayee = payee.replace(busCompanyPattern, 'バス');
+                    const normalizedRemarks = remarks.replace(busCompanyPattern, 'バス');
+
+                    const trainKeywords = [
+                        'ＪＲ', 'JR', 'メトロ', '地下鉄', '小田急', '京王', '東急', '西武', '東武', '京急', '京成', '相鉄', 
+                        'つくばエクスプレス', '新幹線', 'モノレール', '線', '電鉄', '鉄道', '急行', '快速', '特急'
+                    ];
+                    
+                    const hasTrainKeyword = trainKeywords.some(kw => normalizedPayee.includes(kw) || normalizedRemarks.includes(kw));
+                    if (!hasTrainKeyword) {
+                        addRowIssue(row, 'error', '経費科目エラー', '電車移動を含まないバス移動のみの場合、経費科目は「交通費（バス）」を選択してください。', '経費科目');
+                    }
+                }
+            }
         }
 
         // --- 4. 交通費（駐車場）ルール ---
@@ -595,19 +618,7 @@ function runValidationChecks() {
                 addRowIssue(row, 'error', '内部飲食記載不足', `内部飲食代の備考欄に必要な記載タグが不足しています: ${missingTags.join(', ')}`, '備考・メモ');
             }
 
-            // 5.2 金額整合性チェック
-            if (hasAmountTag) {
-                // Extract amount from tag, e.g. "金額【11080円】" -> 11080
-                const tagAmountMatch = hasAmountTag[0].match(/金額【(\d+)円】/);
-                if (tagAmountMatch) {
-                    const tagAmountVal = parseInt(tagAmountMatch[1], 10);
-                    if (tagAmountVal !== row.amount) {
-                        addRowIssue(row, 'error', '飲食金額不一致', `備考欄の金額（¥${tagAmountVal.toLocaleString()}）と金額列（¥${row.amount.toLocaleString()}）が一致しません。`, '備考・メモ');
-                    }
-                } else {
-                    addRowIssue(row, 'error', '飲食金額タグ形式不正', '備考欄の金額タグの形式が不正です（例：金額【11080円】）。', '備考・メモ');
-                }
-            }
+
         }
     });
 
