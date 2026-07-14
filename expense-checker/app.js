@@ -743,15 +743,20 @@ function runValidationChecks() {
                 // Generate a combined warning for this date.
                 // We will attach the issue to the first row of this date.
                 const targetRow = dayRows[0];
-                let missingParts = [];
-                if (!morningOk) missingParts.push('朝（出社）');
-                if (!eveningOk) missingParts.push('帰り（帰宅）');
+                let desc = '';
+                if (!morningOk && !eveningOk) {
+                    desc = `${dateStr} の通勤申請に不足があります: 朝（出社）および 帰り（帰宅）の通勤ルート（または自宅発着の交通費）が申請されていません。`;
+                } else if (!morningOk) {
+                    desc = `${dateStr} の通勤申請に不足があります: 朝（出社）の通勤ルート（または自宅発着の交通費）が申請されていません（通勤費の登録が「往復」になっていない可能性があります）。`;
+                } else if (!eveningOk) {
+                    desc = `${dateStr} の通勤申請に不足があります: 帰り（帰宅）の通勤ルート（または自宅発着の交通費）が申請されていません（通勤費の登録が「往復」になっていない可能性があります）。`;
+                }
 
                 addRowIssue(
                     targetRow, 
                     'warning', 
                     '通勤費・交通費漏れ疑い', 
-                    `${dateStr} の通勤申請に不足があります: ${missingParts.join(' および ')} の通勤ルート（または自宅発着の交通費）が申請されていません。`, 
+                    desc, 
                     '経費科目'
                 );
             }
