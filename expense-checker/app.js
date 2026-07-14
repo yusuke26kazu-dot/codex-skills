@@ -618,7 +618,7 @@ function runValidationChecks() {
                         
                         const hasTrainKeyword = trainKeywords.some(kw => normalizedPayee.includes(kw) || normalizedRemarks.includes(kw));
                         if (!hasTrainKeyword) {
-                            addRowIssue(row, 'error', '経費科目エラー', '電車移動を含まないバス移動のみの場合、経費科目は「交通費（バス）」を選択してください。', '経費科目');
+                            addRowIssue(row, 'warning', '経費科目確認（バス）', '電車移動を含まないバス移動のみの場合、経費科目は「交通費（バス）」を選択する必要があります。間に電車移動が挟まっていないか確認してください。', '経費科目');
                         }
                     }
                 }
