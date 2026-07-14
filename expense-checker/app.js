@@ -574,18 +574,35 @@ function runValidationChecks() {
                 const remarks = row.remarks;
                 const hasBusText = payee.includes('バス') || remarks.includes('バス');
                 if (hasBusText) {
-                    const busCompanyPattern = /(東急|ＪＲ|JR|小田急|京王|西武|東武|京急|京成|名鉄|近鉄|南海|阪急|都営|都|市営|市|関東|国際興業|川崎鶴見臨港|立川|相鉄|相模鉄道|コミュニティ|シャトル)バス/g;
-                    const normalizedPayee = payee.replace(busCompanyPattern, 'バス');
-                    const normalizedRemarks = remarks.replace(busCompanyPattern, 'バス');
+                    let isBusOnlyTrip = false;
+                    const hasArrows = payee.includes('→') || payee.includes('⇔');
+                    if (hasArrows) {
+                        const parts = payee.split(/→|⇔/);
+                        if (parts.length >= 2) {
+                            const startHasBus = parts[0].includes('バス');
+                            const endHasBus = parts[parts.length - 1].includes('バス');
+                            if (startHasBus && endHasBus) {
+                                isBusOnlyTrip = true;
+                            }
+                        }
+                    } else {
+                        isBusOnlyTrip = true;
+                    }
 
-                    const trainKeywords = [
-                        'ＪＲ', 'JR', 'メトロ', '地下鉄', '小田急', '京王', '東急', '西武', '東武', '京急', '京成', '相鉄', 
-                        'つくばエクスプレス', '新幹線', 'モノレール', '線', '電鉄', '鉄道', '急行', '快速', '特急'
-                    ];
-                    
-                    const hasTrainKeyword = trainKeywords.some(kw => normalizedPayee.includes(kw) || normalizedRemarks.includes(kw));
-                    if (!hasTrainKeyword) {
-                        addRowIssue(row, 'error', '経費科目エラー', '電車移動を含まないバス移動のみの場合、経費科目は「交通費（バス）」を選択してください。', '経費科目');
+                    if (isBusOnlyTrip) {
+                        const busCompanyPattern = /(東急|ＪＲ|JR|小田急|京王|西武|東武|京急|京成|名鉄|近鉄|南海|阪急|都営|都|市営|市|関東|国際興業|川崎鶴見臨港|立川|相鉄|相模鉄道|コミュニティ|シャトル)バス/g;
+                        const normalizedPayee = payee.replace(busCompanyPattern, 'バス');
+                        const normalizedRemarks = remarks.replace(busCompanyPattern, 'バス');
+
+                        const trainKeywords = [
+                            'ＪＲ', 'JR', 'メトロ', '地下鉄', '小田急', '京王', '東急', '西武', '東武', '京急', '京成', '相鉄', 
+                            'つくばエクスプレス', '新幹線', 'モノレール', '線', '電鉄', '鉄道', '急行', '快速', '特急'
+                        ];
+                        
+                        const hasTrainKeyword = trainKeywords.some(kw => normalizedPayee.includes(kw) || normalizedRemarks.includes(kw));
+                        if (!hasTrainKeyword) {
+                            addRowIssue(row, 'error', '経費科目エラー', '電車移動を含まないバス移動のみの場合、経費科目は「交通費（バス）」を選択してください。', '経費科目');
+                        }
                     }
                 }
             }
